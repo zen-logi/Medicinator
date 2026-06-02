@@ -1,17 +1,29 @@
 import { FormEvent, useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/shared/components/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/card";
 import { Input } from "@/shared/components/input";
 import type { IntakeRecord, Medicine, Person } from "@/shared/types/domain";
 
 type RecordAddFormProps = {
   people: Person[];
   medicines: Medicine[];
-  onAdd: (input: Pick<IntakeRecord, "medicineId" | "personId" | "status" | "memo">) => void;
+  onAdd: (
+    input: Pick<IntakeRecord, "medicineId" | "personId" | "status" | "memo">,
+  ) => void;
 };
 
-export function RecordAddForm({ people, medicines, onAdd }: RecordAddFormProps) {
+export function RecordAddForm({
+  people,
+  medicines,
+  onAdd,
+}: RecordAddFormProps) {
   const [medicineId, setMedicineId] = useState(medicines[0]?.id ?? "");
   const [personId, setPersonId] = useState(people[0]?.id ?? "");
   const [status, setStatus] = useState<IntakeRecord["status"]>("taken");
@@ -32,10 +44,15 @@ export function RecordAddForm({ people, medicines, onAdd }: RecordAddFormProps) 
     <Card>
       <CardHeader>
         <CardTitle>記録追加</CardTitle>
-        <CardDescription>飲んだ薬や見送った薬をすぐに残せます。</CardDescription>
+        <CardDescription>
+          飲んだ薬や見送った薬をすぐに残せます。
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <form className="grid gap-4 md:grid-cols-[1fr_1fr_160px] md:items-end" onSubmit={handleSubmit}>
+        <form
+          className="grid gap-4 md:grid-cols-[1fr_1fr_160px] md:items-end"
+          onSubmit={handleSubmit}
+        >
           <label className="block space-y-1.5 text-sm font-medium">
             <span>飲む人</span>
             <select
@@ -58,9 +75,14 @@ export function RecordAddForm({ people, medicines, onAdd }: RecordAddFormProps) 
               value={medicineId}
             >
               {medicines.map((medicine) => {
-                const person = people.find((candidate) => candidate.id === medicine.personId);
+                const person = people.find(
+                  (candidate) => candidate.id === medicine.personId,
+                );
                 return (
-                  <option key={medicine.id} value={medicine.id}>{person?.name ? `${person.name} / ` : ""}{medicine.name}</option>
+                  <option key={medicine.id} value={medicine.id}>
+                    {person?.name ? `${person.name} / ` : ""}
+                    {medicine.name}
+                  </option>
                 );
               })}
             </select>
@@ -69,7 +91,9 @@ export function RecordAddForm({ people, medicines, onAdd }: RecordAddFormProps) 
             <span>状態</span>
             <select
               className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              onChange={(event) => setStatus(event.target.value as IntakeRecord["status"])}
+              onChange={(event) =>
+                setStatus(event.target.value as IntakeRecord["status"])
+              }
               value={status}
             >
               <option value="taken">飲んだ</option>
@@ -78,7 +102,11 @@ export function RecordAddForm({ people, medicines, onAdd }: RecordAddFormProps) 
           </label>
           <label className="block space-y-1.5 text-sm font-medium md:col-span-3">
             <span>メモ</span>
-            <Input onChange={(event) => setMemo(event.target.value)} placeholder="例: 食後に服用" value={memo} />
+            <Input
+              onChange={(event) => setMemo(event.target.value)}
+              placeholder="例: 食後に服用"
+              value={memo}
+            />
           </label>
           <Button className="md:col-span-3" type="submit">
             <Plus aria-hidden className="h-4 w-4" />

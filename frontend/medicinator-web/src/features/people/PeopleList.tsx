@@ -1,7 +1,12 @@
 import { Check, Pencil, Trash2, UserRound, X } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { Button } from "@/shared/components/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/card";
 import { Input } from "@/shared/components/input";
 import type { Person } from "@/shared/types/domain";
 
@@ -12,7 +17,12 @@ type PeopleListProps = {
   onUpdate: (personId: string, name: string, relation: string) => void;
 };
 
-export function PeopleList({ onAdd, onDelete, onUpdate, people }: PeopleListProps) {
+export function PeopleList({
+  onAdd,
+  onDelete,
+  onUpdate,
+  people,
+}: PeopleListProps) {
   const [editingId, setEditingId] = useState<string | undefined>();
   const [editingName, setEditingName] = useState("");
   const [editingRelation, setEditingRelation] = useState("");
@@ -61,11 +71,19 @@ export function PeopleList({ onAdd, onDelete, onUpdate, people }: PeopleListProp
           <form className="space-y-5" onSubmit={handleSubmit}>
             <label className="block space-y-2 text-sm font-medium">
               <span>名前</span>
-              <Input onChange={(event) => setName(event.target.value)} placeholder="例: 春子" value={name} />
+              <Input
+                onChange={(event) => setName(event.target.value)}
+                placeholder="例: 春子"
+                value={name}
+              />
             </label>
             <label className="block space-y-2 text-sm font-medium">
               <span>メモ</span>
-              <Input onChange={(event) => setRelation(event.target.value)} placeholder="例: 本人" value={relation} />
+              <Input
+                onChange={(event) => setRelation(event.target.value)}
+                placeholder="例: 本人"
+                value={relation}
+              />
             </label>
             <Button className="w-full rounded-full" type="submit">
               <UserRound aria-hidden className="h-4 w-4" />
@@ -81,7 +99,10 @@ export function PeopleList({ onAdd, onDelete, onUpdate, people }: PeopleListProp
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {people.map((person) => (
-              <div className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-white p-4" key={person.id}>
+              <div
+                className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-white p-4"
+                key={person.id}
+              >
                 <div
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white"
                   style={{ backgroundColor: person.color }}
@@ -98,14 +119,18 @@ export function PeopleList({ onAdd, onDelete, onUpdate, people }: PeopleListProp
                       />
                       <Input
                         aria-label="飲む人のメモ"
-                        onChange={(event) => setEditingRelation(event.target.value)}
+                        onChange={(event) =>
+                          setEditingRelation(event.target.value)
+                        }
                         value={editingRelation}
                       />
                     </div>
                   ) : (
                     <>
                       <h3 className="truncate font-medium">{person.name}</h3>
-                      <p className="truncate text-sm text-muted-foreground">{person.relation}</p>
+                      <p className="truncate text-sm text-muted-foreground">
+                        {person.relation}
+                      </p>
                     </>
                   )}
                 </div>

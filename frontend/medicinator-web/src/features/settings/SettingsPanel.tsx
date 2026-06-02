@@ -1,7 +1,13 @@
 import { FamilySettingsPanel } from "@/features/family/FamilySettingsPanel";
 import { PeopleList } from "@/features/people/PeopleList";
 import { StatsPanel } from "@/features/stats/StatsPanel";
-import type { FamilyInvite, FamilySettings, IntakeRecord, Medicine, Person } from "@/shared/types/domain";
+import type {
+  FamilyInvite,
+  FamilySettings,
+  IntakeRecord,
+  Medicine,
+  Person,
+} from "@/shared/types/domain";
 
 type SettingsPanelProps = {
   settings: FamilySettings;
@@ -46,7 +52,12 @@ export function SettingsPanel({
         onRevokeInvite={onRevokeInvite}
         settings={settings}
       />
-      <PeopleList onAdd={onAddPerson} onDelete={onDeletePerson} onUpdate={onUpdatePerson} people={people} />
+      <PeopleList
+        onAdd={onAddPerson}
+        onDelete={onDeletePerson}
+        onUpdate={onUpdatePerson}
+        people={people}
+      />
     </section>
   );
 }

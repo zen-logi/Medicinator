@@ -1,4 +1,8 @@
-import type { IntakeRecord, IntakeTiming, Medicine } from "@/shared/types/domain";
+import type {
+  IntakeRecord,
+  IntakeTiming,
+  Medicine,
+} from "@/shared/types/domain";
 
 export function toDateKey(date: Date) {
   const year = date.getFullYear();
@@ -8,14 +12,26 @@ export function toDateKey(date: Date) {
 }
 
 export function isMedicineActiveOn(medicine: Medicine, dateKey: string) {
-  return medicine.startDate <= dateKey && (!medicine.endDate || medicine.endDate >= dateKey);
+  return (
+    medicine.startDate <= dateKey &&
+    (!medicine.endDate || medicine.endDate >= dateKey)
+  );
 }
 
-export function recordKey(medicineId: string, timing: IntakeTiming, dateKey: string) {
+export function recordKey(
+  medicineId: string,
+  timing: IntakeTiming,
+  dateKey: string,
+) {
   return `${medicineId}:${timing}:${dateKey}`;
 }
 
-export function getTakenRecord(records: IntakeRecord[], medicineId: string, timing: IntakeTiming, dateKey: string) {
+export function getTakenRecord(
+  records: IntakeRecord[],
+  medicineId: string,
+  timing: IntakeTiming,
+  dateKey: string,
+) {
   return records.find(
     (record) =>
       record.medicineId === medicineId &&
@@ -28,5 +44,7 @@ export function getTakenRecord(records: IntakeRecord[], medicineId: string, timi
 export function getScheduleForDate(medicines: Medicine[], dateKey: string) {
   return medicines
     .filter((medicine) => isMedicineActiveOn(medicine, dateKey))
-    .flatMap((medicine) => medicine.timing.map((timing) => ({ medicine, timing })));
+    .flatMap((medicine) =>
+      medicine.timing.map((timing) => ({ medicine, timing })),
+    );
 }

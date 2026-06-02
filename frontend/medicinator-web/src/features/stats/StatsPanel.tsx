@@ -1,12 +1,25 @@
 import { BarChart3, CheckCircle2, ClipboardList } from "lucide-react";
-import { getScheduleForDate, getTakenRecord, toDateKey } from "@/shared/lib/schedule";
+import {
+  getScheduleForDate,
+  getTakenRecord,
+  toDateKey,
+} from "@/shared/lib/schedule";
 import type { IntakeRecord, Medicine } from "@/shared/types/domain";
 
-export function StatsPanel({ medicines, records }: { medicines: Medicine[]; records: IntakeRecord[] }) {
+export function StatsPanel({
+  medicines,
+  records,
+}: {
+  medicines: Medicine[];
+  records: IntakeRecord[];
+}) {
   const todayKey = toDateKey(new Date());
   const schedule = getScheduleForDate(medicines, todayKey);
-  const taken = schedule.filter(({ medicine, timing }) => getTakenRecord(records, medicine.id, timing, todayKey)).length;
-  const rate = schedule.length === 0 ? 0 : Math.round((taken / schedule.length) * 100);
+  const taken = schedule.filter(({ medicine, timing }) =>
+    getTakenRecord(records, medicine.id, timing, todayKey),
+  ).length;
+  const rate =
+    schedule.length === 0 ? 0 : Math.round((taken / schedule.length) * 100);
 
   return (
     <section className="space-y-5">

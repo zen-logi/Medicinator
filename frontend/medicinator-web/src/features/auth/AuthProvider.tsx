@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   browserLocalPersistence,
   onAuthStateChanged,
@@ -9,7 +16,11 @@ import {
   type User,
 } from "firebase/auth";
 import { createApiClient, type ApiClient } from "@/shared/api/http-client";
-import { getFirebaseAuth, googleProvider, isFirebaseConfigured } from "@/shared/api/firebase";
+import {
+  getFirebaseAuth,
+  googleProvider,
+  isFirebaseConfigured,
+} from "@/shared/api/firebase";
 
 type AuthContextValue = {
   user: User | null;

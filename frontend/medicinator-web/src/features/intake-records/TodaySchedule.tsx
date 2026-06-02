@@ -1,14 +1,38 @@
 import { useState } from "react";
-import { Check, ChevronDown, Clock3, Coffee, Moon, Pill, Sunrise, Sunset, Utensils } from "lucide-react";
-import { getScheduleForDate, getTakenRecord, toDateKey } from "@/shared/lib/schedule";
-import type { IntakeRecord, IntakeTiming, Medicine, Person } from "@/shared/types/domain";
+import {
+  Check,
+  ChevronDown,
+  Clock3,
+  Coffee,
+  Moon,
+  Pill,
+  Sunrise,
+  Sunset,
+  Utensils,
+} from "lucide-react";
+import {
+  getScheduleForDate,
+  getTakenRecord,
+  toDateKey,
+} from "@/shared/lib/schedule";
+import type {
+  IntakeRecord,
+  IntakeTiming,
+  Medicine,
+  Person,
+} from "@/shared/types/domain";
 import { timingLabels } from "@/shared/types/domain";
 
 type TodayScheduleProps = {
   medicines: Medicine[];
   people: Person[];
   records: IntakeRecord[];
-  onToggle: (medicine: Medicine, timing: IntakeTiming, taken: boolean, dateKey: string) => void;
+  onToggle: (
+    medicine: Medicine,
+    timing: IntakeTiming,
+    taken: boolean,
+    dateKey: string,
+  ) => void;
 };
 
 const timingIcons: Record<IntakeTiming, typeof Sunrise> = {
@@ -37,8 +61,15 @@ const timingOrder: IntakeTiming[] = [
   "asNeeded",
 ];
 
-export function TodaySchedule({ medicines, onToggle, people, records }: TodayScheduleProps) {
-  const [expandedTimings, setExpandedTimings] = useState<Partial<Record<IntakeTiming, boolean>>>({});
+export function TodaySchedule({
+  medicines,
+  onToggle,
+  people,
+  records,
+}: TodayScheduleProps) {
+  const [expandedTimings, setExpandedTimings] = useState<
+    Partial<Record<IntakeTiming, boolean>>
+  >({});
   const todayKey = toDateKey(new Date());
   const schedule = getScheduleForDate(medicines, todayKey);
   const grouped = timingOrder.map((timing) => ({
@@ -54,7 +85,9 @@ export function TodaySchedule({ medicines, onToggle, people, records }: TodaySch
             <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-pink-50 text-pink-500">
               <Check aria-hidden className="h-7 w-7" />
             </span>
-            <p className="mt-4 font-semibold text-pink-900">今日の予定はありません</p>
+            <p className="mt-4 font-semibold text-pink-900">
+              今日の予定はありません
+            </p>
           </div>
         </div>
       )}
@@ -66,7 +99,9 @@ export function TodaySchedule({ medicines, onToggle, people, records }: TodaySch
             return null;
           }
 
-          const takenCount = items.filter(({ medicine }) => getTakenRecord(records, medicine.id, timing, todayKey)).length;
+          const takenCount = items.filter(({ medicine }) =>
+            getTakenRecord(records, medicine.id, timing, todayKey),
+          ).length;
           const completed = takenCount === items.length;
           const expanded = Boolean(expandedTimings[timing]);
 
@@ -74,7 +109,9 @@ export function TodaySchedule({ medicines, onToggle, people, records }: TodaySch
             <div
               className="cute-surface motion-enter rounded-lg p-5"
               key={timing}
-              style={{ animationDelay: `${Math.min(timingOrder.indexOf(timing) * 45, 240)}ms` }}
+              style={{
+                animationDelay: `${Math.min(timingOrder.indexOf(timing) * 45, 240)}ms`,
+              }}
             >
               <div className="grid grid-cols-[1fr_auto_auto] items-center gap-3 sm:gap-5">
                 <div className="min-w-0">
@@ -83,8 +120,12 @@ export function TodaySchedule({ medicines, onToggle, people, records }: TodaySch
                       <Icon aria-hidden className="h-5 w-5" />
                     </span>
                     <div>
-                      <div className="text-2xl font-semibold text-pink-950">{timingLabels[timing]}</div>
-                      <div className="mt-1 text-sm font-medium text-pink-300">{takenCount}/{items.length}</div>
+                      <div className="text-2xl font-semibold text-pink-950">
+                        {timingLabels[timing]}
+                      </div>
+                      <div className="mt-1 text-sm font-medium text-pink-300">
+                        {takenCount}/{items.length}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -93,7 +134,12 @@ export function TodaySchedule({ medicines, onToggle, people, records }: TodaySch
                   aria-expanded={expanded}
                   aria-label={`${timingLabels[timing]}の薬を${expanded ? "閉じる" : "開く"}`}
                   className="motion-press flex h-11 w-11 items-center justify-center rounded-full bg-white/70 text-pink-400 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.85)] hover:text-pink-600"
-                  onClick={() => setExpandedTimings((current) => ({ ...current, [timing]: !current[timing] }))}
+                  onClick={() =>
+                    setExpandedTimings((current) => ({
+                      ...current,
+                      [timing]: !current[timing],
+                    }))
+                  }
                   type="button"
                 >
                   <ChevronDown
@@ -111,7 +157,9 @@ export function TodaySchedule({ medicines, onToggle, people, records }: TodaySch
                   }`}
                   onClick={() => {
                     for (const { medicine } of items) {
-                      const isTaken = Boolean(getTakenRecord(records, medicine.id, timing, todayKey));
+                      const isTaken = Boolean(
+                        getTakenRecord(records, medicine.id, timing, todayKey),
+                      );
                       if (!isTaken) {
                         onToggle(medicine, timing, true, todayKey);
                       }
@@ -123,12 +171,18 @@ export function TodaySchedule({ medicines, onToggle, people, records }: TodaySch
                 </button>
               </div>
 
-              <div className={`motion-collapse-grid ${expanded ? "is-open" : ""}`}>
+              <div
+                className={`motion-collapse-grid ${expanded ? "is-open" : ""}`}
+              >
                 <div className="min-h-0 overflow-hidden">
                   <div className="motion-collapse-panel mt-5 divide-y divide-zinc-100 border-t border-zinc-100 pt-2">
                     {items.map(({ medicine }) => {
-                      const person = people.find((candidate) => candidate.id === medicine.personId);
-                      const isTaken = Boolean(getTakenRecord(records, medicine.id, timing, todayKey));
+                      const person = people.find(
+                        (candidate) => candidate.id === medicine.personId,
+                      );
+                      const isTaken = Boolean(
+                        getTakenRecord(records, medicine.id, timing, todayKey),
+                      );
 
                       return (
                         <label
@@ -136,7 +190,9 @@ export function TodaySchedule({ medicines, onToggle, people, records }: TodaySch
                           key={`${medicine.id}:${timing}`}
                         >
                           <span className="min-w-0">
-                            <span className="block truncate text-base font-semibold text-zinc-950">{medicine.name}</span>
+                            <span className="block truncate text-base font-semibold text-zinc-950">
+                              {medicine.name}
+                            </span>
                             <span className="mt-1 block truncate text-sm text-zinc-400">
                               {medicine.dosage} / {person?.name ?? "未設定"}
                             </span>
@@ -144,7 +200,14 @@ export function TodaySchedule({ medicines, onToggle, people, records }: TodaySch
                           <input
                             checked={isTaken}
                             className="h-7 w-7 rounded border-pink-200 text-emerald-500 accent-emerald-400"
-                            onChange={(event) => onToggle(medicine, timing, event.target.checked, todayKey)}
+                            onChange={(event) =>
+                              onToggle(
+                                medicine,
+                                timing,
+                                event.target.checked,
+                                todayKey,
+                              )
+                            }
                             type="checkbox"
                           />
                         </label>

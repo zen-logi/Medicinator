@@ -18,13 +18,17 @@ async function request<TResponse>(
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(!token && import.meta.env.DEV ? { "X-Development-User": "local-user" } : {}),
+      ...(!token && import.meta.env.DEV
+        ? { "X-Development-User": "local-user" }
+        : {}),
       ...init.headers,
     },
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    throw new Error(
+      `API request failed: ${response.status} ${response.statusText}`,
+    );
   }
 
   if (response.status === 204) {
@@ -34,11 +38,15 @@ async function request<TResponse>(
   return response.json() as Promise<TResponse>;
 }
 
-export function createApiClient(getToken: () => Promise<string | undefined>): ApiClient {
+export function createApiClient(
+  getToken: () => Promise<string | undefined>,
+): ApiClient {
   return {
     delete: (path) => request(path, { method: "DELETE" }, getToken),
     get: (path) => request(path, { method: "GET" }, getToken),
-    post: (path, body) => request(path, { method: "POST", body: JSON.stringify(body) }, getToken),
-    put: (path, body) => request(path, { method: "PUT", body: JSON.stringify(body) }, getToken),
+    post: (path, body) =>
+      request(path, { method: "POST", body: JSON.stringify(body) }, getToken),
+    put: (path, body) =>
+      request(path, { method: "PUT", body: JSON.stringify(body) }, getToken),
   };
 }

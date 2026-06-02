@@ -2,7 +2,12 @@ import { ChevronDown, Plus, Tablets } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { Badge } from "@/shared/components/badge";
 import { Button } from "@/shared/components/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/card";
 import { Input } from "@/shared/components/input";
 import type { IntakeTiming, Medicine, Person } from "@/shared/types/domain";
 import { timingLabels } from "@/shared/types/domain";
@@ -36,7 +41,9 @@ export function MedicineList({ onAdd, people, medicines }: MedicineListProps) {
   const [name, setName] = useState("");
   const [dosage, setDosage] = useState("");
   const [instructions, setInstructions] = useState(usageMethods[0]);
-  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [startDate, setStartDate] = useState(
+    new Date().toISOString().slice(0, 10),
+  );
   const [endDate, setEndDate] = useState("");
   const [timing, setTiming] = useState<IntakeTiming[]>(["afterBreakfast"]);
 
@@ -46,7 +53,15 @@ export function MedicineList({ onAdd, people, medicines }: MedicineListProps) {
       return;
     }
 
-    onAdd({ dosage, endDate: endDate || undefined, instructions, name, personId, startDate, timing });
+    onAdd({
+      dosage,
+      endDate: endDate || undefined,
+      instructions,
+      name,
+      personId,
+      startDate,
+      timing,
+    });
     setName("");
     setDosage("");
     setIsAdding(false);
@@ -66,7 +81,12 @@ export function MedicineList({ onAdd, people, medicines }: MedicineListProps) {
   return (
     <section className="space-y-7">
       <div className="flex items-center justify-end">
-        <Button onClick={() => setIsAdding((current) => !current)} size="sm" type="button" className="rounded-full">
+        <Button
+          onClick={() => setIsAdding((current) => !current)}
+          size="sm"
+          type="button"
+          className="rounded-full"
+        >
           <Plus aria-hidden className="h-4 w-4" />
           {isAdding ? "閉じる" : "追加"}
         </Button>
@@ -82,11 +102,19 @@ export function MedicineList({ onAdd, people, medicines }: MedicineListProps) {
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="block space-y-2 text-sm font-medium">
                   <span>薬名</span>
-                  <Input onChange={(event) => setName(event.target.value)} placeholder="アムロジピン" value={name} />
+                  <Input
+                    onChange={(event) => setName(event.target.value)}
+                    placeholder="アムロジピン"
+                    value={name}
+                  />
                 </label>
                 <label className="block space-y-2 text-sm font-medium">
                   <span>用量</span>
-                  <Input onChange={(event) => setDosage(event.target.value)} placeholder="5mg / 1錠" value={dosage} />
+                  <Input
+                    onChange={(event) => setDosage(event.target.value)}
+                    placeholder="5mg / 1錠"
+                    value={dosage}
+                  />
                 </label>
               </div>
 
@@ -104,7 +132,10 @@ export function MedicineList({ onAdd, people, medicines }: MedicineListProps) {
                       </option>
                     ))}
                   </select>
-                  <ChevronDown aria-hidden className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <ChevronDown
+                    aria-hidden
+                    className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                  />
                 </span>
               </label>
 
@@ -122,33 +153,53 @@ export function MedicineList({ onAdd, people, medicines }: MedicineListProps) {
                       </option>
                     ))}
                   </select>
-                  <ChevronDown aria-hidden className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <ChevronDown
+                    aria-hidden
+                    className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                  />
                 </span>
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block space-y-2 text-sm font-medium">
                   <span>開始日</span>
-                  <Input onChange={(event) => setStartDate(event.target.value)} type="date" value={startDate} />
+                  <Input
+                    onChange={(event) => setStartDate(event.target.value)}
+                    type="date"
+                    value={startDate}
+                  />
                 </label>
                 <label className="block space-y-2 text-sm font-medium">
                   <span>終了日</span>
-                  <Input onChange={(event) => setEndDate(event.target.value)} type="date" value={endDate} />
+                  <Input
+                    onChange={(event) => setEndDate(event.target.value)}
+                    type="date"
+                    value={endDate}
+                  />
                 </label>
               </div>
               <div className="space-y-3">
                 <span className="text-sm font-medium">服用タイミング</span>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-                  {(Object.keys(timingLabels) as IntakeTiming[]).map((value) => (
-                    <label
-                      className={`motion-press flex min-h-12 items-center justify-center rounded-full border px-3 text-sm font-semibold ${
-                        timing.includes(value) ? "border-pink-300 bg-pink-100 text-pink-700" : "border-pink-100 bg-white/70 text-zinc-500"
-                      }`}
-                      key={value}
-                    >
-                      <input checked={timing.includes(value)} className="sr-only" onChange={() => toggleTiming(value)} type="checkbox" />
-                      {timingLabels[value]}
-                    </label>
-                  ))}
+                  {(Object.keys(timingLabels) as IntakeTiming[]).map(
+                    (value) => (
+                      <label
+                        className={`motion-press flex min-h-12 items-center justify-center rounded-full border px-3 text-sm font-semibold ${
+                          timing.includes(value)
+                            ? "border-pink-300 bg-pink-100 text-pink-700"
+                            : "border-pink-100 bg-white/70 text-zinc-500"
+                        }`}
+                        key={value}
+                      >
+                        <input
+                          checked={timing.includes(value)}
+                          className="sr-only"
+                          onChange={() => toggleTiming(value)}
+                          type="checkbox"
+                        />
+                        {timingLabels[value]}
+                      </label>
+                    ),
+                  )}
                 </div>
               </div>
               <Button className="w-full" type="submit">
@@ -164,7 +215,9 @@ export function MedicineList({ onAdd, people, medicines }: MedicineListProps) {
         <CardContent className="p-0">
           <div className="divide-y divide-zinc-100">
             {medicines.map((medicine) => {
-              const person = people.find((candidate) => candidate.id === medicine.personId);
+              const person = people.find(
+                (candidate) => candidate.id === medicine.personId,
+              );
               return (
                 <div className="motion-enter bg-white/64 p-5" key={medicine.id}>
                   <div className="flex items-start gap-4">
@@ -172,9 +225,15 @@ export function MedicineList({ onAdd, people, medicines }: MedicineListProps) {
                       <Tablets aria-hidden className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
-                      <h3 className="text-lg font-semibold text-zinc-950">{medicine.name}</h3>
-                      <p className="mt-1 text-sm text-zinc-400">{person?.name ?? "未設定"} / {medicine.dosage}</p>
-                      <p className="mt-2 text-sm text-zinc-500">{medicine.instructions}</p>
+                      <h3 className="text-lg font-semibold text-zinc-950">
+                        {medicine.name}
+                      </h3>
+                      <p className="mt-1 text-sm text-zinc-400">
+                        {person?.name ?? "未設定"} / {medicine.dosage}
+                      </p>
+                      <p className="mt-2 text-sm text-zinc-500">
+                        {medicine.instructions}
+                      </p>
                       <p className="mt-1 text-xs text-zinc-400">
                         {medicine.startDate} から {medicine.endDate || "継続"}
                       </p>
@@ -184,7 +243,9 @@ export function MedicineList({ onAdd, people, medicines }: MedicineListProps) {
                             {timingLabels[timing]}
                           </Badge>
                         ))}
-                        <Badge tone={medicine.stock <= 5 ? "amber" : "neutral"}>残 {medicine.stock}</Badge>
+                        <Badge tone={medicine.stock <= 5 ? "amber" : "neutral"}>
+                          残 {medicine.stock}
+                        </Badge>
                       </div>
                     </div>
                   </div>

@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { Bell, ChevronDown, Copy, Home, Link2, Trash2 } from "lucide-react";
 import { Button } from "@/shared/components/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/card";
 import { Input } from "@/shared/components/input";
 import type { FamilyInvite, FamilySettings } from "@/shared/types/domain";
 
@@ -34,7 +39,12 @@ export function FamilySettingsPanel({
   settings,
 }: FamilySettingsPanelProps) {
   const [joinInviteCode, setJoinInviteCode] = useState("");
-  const activeInvites = invites.filter((invite) => !invite.usedAt && !invite.revokedAt && new Date(invite.expiresAt) > new Date());
+  const activeInvites = invites.filter(
+    (invite) =>
+      !invite.usedAt &&
+      !invite.revokedAt &&
+      new Date(invite.expiresAt) > new Date(),
+  );
 
   return (
     <Card>
@@ -49,7 +59,9 @@ export function FamilySettingsPanel({
               家族名
             </span>
             <Input
-              onChange={(event) => onChange({ ...settings, familyName: event.target.value })}
+              onChange={(event) =>
+                onChange({ ...settings, familyName: event.target.value })
+              }
               value={settings.familyName}
             />
           </label>
@@ -58,7 +70,9 @@ export function FamilySettingsPanel({
             <span className="relative block">
               <select
                 className="h-10 w-full appearance-none rounded-md border border-input bg-white px-3 pr-9 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                onChange={(event) => onChange({ ...settings, timezone: event.target.value })}
+                onChange={(event) =>
+                  onChange({ ...settings, timezone: event.target.value })
+                }
                 value={settings.timezone}
               >
                 {timeZones.map((timeZone) => (
@@ -67,14 +81,19 @@ export function FamilySettingsPanel({
                   </option>
                 ))}
               </select>
-              <ChevronDown aria-hidden className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <ChevronDown
+                aria-hidden
+                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              />
             </span>
           </label>
           <label className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-white p-4 text-sm font-medium">
             <input
               checked={settings.reminderEnabled}
               className="h-4 w-4 rounded border-input text-primary"
-              onChange={(event) => onChange({ ...settings, reminderEnabled: event.target.checked })}
+              onChange={(event) =>
+                onChange({ ...settings, reminderEnabled: event.target.checked })
+              }
               type="checkbox"
             />
             <span className="inline-flex items-center gap-2">
@@ -87,7 +106,11 @@ export function FamilySettingsPanel({
             <Input
               min={0}
               onChange={(event) =>
-                onChange({ ...settings, reminderLeadMinutes: Number.parseInt(event.target.value, 10) || 0 })
+                onChange({
+                  ...settings,
+                  reminderLeadMinutes:
+                    Number.parseInt(event.target.value, 10) || 0,
+                })
               }
               type="number"
               value={settings.reminderLeadMinutes}
@@ -105,7 +128,9 @@ export function FamilySettingsPanel({
                 <Link2 aria-hidden className="h-4 w-4 text-pink-500" />
                 招待
               </h3>
-              <p className="mt-1 text-sm text-muted-foreground">作成直後だけコードを表示します。</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                作成直後だけコードを表示します。
+              </p>
             </div>
             <Button onClick={() => void onCreateInvite()} type="button">
               招待を作成
@@ -114,13 +139,17 @@ export function FamilySettingsPanel({
 
           {latestInviteCode && (
             <div className="motion-enter mt-5 rounded-lg border border-emerald-100 bg-emerald-50/80 p-4">
-              <p className="text-xs font-semibold text-emerald-700">新しい招待コード</p>
+              <p className="text-xs font-semibold text-emerald-700">
+                新しい招待コード
+              </p>
               <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <code className="rounded-md bg-white/80 px-3 py-2 text-base font-semibold text-emerald-950">
                   {latestInviteCode}
                 </code>
                 <Button
-                  onClick={() => void navigator.clipboard?.writeText(latestInviteCode)}
+                  onClick={() =>
+                    void navigator.clipboard?.writeText(latestInviteCode)
+                  }
                   type="button"
                   variant="secondary"
                 >
@@ -144,12 +173,21 @@ export function FamilySettingsPanel({
                 >
                   <div>
                     <p className="text-sm font-semibold text-pink-950">
-                      {new Intl.DateTimeFormat("ja-JP", { dateStyle: "medium", timeStyle: "short" }).format(new Date(invite.expiresAt))}
+                      {new Intl.DateTimeFormat("ja-JP", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      }).format(new Date(invite.expiresAt))}
                       まで有効
                     </p>
-                    <p className="mt-1 text-xs text-muted-foreground">作成者: {invite.createdByFirebaseUid}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      作成者: {invite.createdByFirebaseUid}
+                    </p>
                   </div>
-                  <Button onClick={() => void onRevokeInvite(invite.id)} type="button" variant="ghost">
+                  <Button
+                    onClick={() => void onRevokeInvite(invite.id)}
+                    type="button"
+                    variant="ghost"
+                  >
                     <Trash2 aria-hidden className="h-4 w-4" />
                     失効
                   </Button>
