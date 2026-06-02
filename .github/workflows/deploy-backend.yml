@@ -6,63 +6,107 @@ on:
     branches:
       - main
     paths:
-      - "backend/**"
+      - "workers/**"
       - "deploy/**"
       - ".github/workflows/deploy-backend.yml"
 
 jobs:
   deploy:
-    name: GCP VM
+    name: Cloudflare Workers
     runs-on: ubuntu-latest
     env:
-      SSH_HOST: ${{ secrets.PRODUCTION_SSH_HOST }}
-      SSH_PORT: ${{ secrets.PRODUCTION_SSH_PORT || '22' }}
-      SSH_USER: ${{ secrets.PRODUCTION_SSH_USER }}
-      DEPLOY_PATH: ${{ vars.PRODUCTION_DEPLOY_PATH || '/opt/medicinator' }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_WORKER_DIRECTORY: ${{ vars.CLOUDFLARE_WORKER_DIRECTORY || 'workers/medicinator-api' }}
+      CLOUDFLARE_WORKER_ENV: ${{ vars.CLOUDFLARE_WORKER_ENV }}
+      D1_DATABASE_NAME: ${{ vars.D1_DATABASE_NAME || 'medicinator' }}
+      D1_DATABASE_ID: ${{ vars.D1_DATABASE_ID }}
+      FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+      FRONTEND_ORIGIN: ${{ vars.FRONTEND_ORIGIN || vars.MEDICINATOR_FRONTEND_ORIGIN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          dotnet-version: 10.0.x
+          node-version: 24
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Validate Worker project
+        run: |
+          test -d "$CLOUDFLARE_WORKER_DIRECTORY"
+          test -f "$CLOUDFLARE_WORKER_DIRECTORY/wrangler.toml" \
+            || test -f "$CLOUDFLARE_WORKER_DIRECTORY/wrangler.jsonc" \
+            || test -f "$CLOUDFLARE_WORKER_DIRECTORY/wrangler.json"
+          test -n "$D1_DATABASE_ID"
+
+      - name: Inject D1 database id
+        working-directory: ${{ env.CLOUDFLARE_WORKER_DIRECTORY }}
+        run: |
+          node -e "const fs=require('fs'); const path='wrangler.toml'; const value=process.env.D1_DATABASE_ID; const text=fs.readFileSync(path,'utf8'); if (!text.includes('replace-with-d1-database-id')) { throw new Error('D1 database id placeholder was not found.'); } fs.writeFileSync(path, text.replace('replace-with-d1-database-id', value));"
+
+      - name: Install
+        working-directory: ${{ env.CLOUDFLARE_WORKER_DIRECTORY }}
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            corepack pnpm install --frozen-lockfile
+          elif [ -f package.json ]; then
+            corepack pnpm install
+          fi
 
       - name: Test
-        run: dotnet test Medicinator.slnx --configuration Release
-
-      - name: Configure SSH
+        working-directory: ${{ env.CLOUDFLARE_WORKER_DIRECTORY }}
         run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+          if [ -f package.json ] && corepack pnpm run | grep -q '^  test'; then
+            corepack pnpm test
+          else
+            echo "No Worker test script configured."
+          fi
 
-      - name: Prepare remote directory
-        run: ssh -i ~/.ssh/id_ed25519 -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "mkdir -p '$DEPLOY_PATH'"
-
-      - name: Upload application
+      - name: Typecheck
+        working-directory: ${{ env.CLOUDFLARE_WORKER_DIRECTORY }}
         run: |
-          rsync -az --delete \
-            -e "ssh -i ~/.ssh/id_ed25519 -p $SSH_PORT" \
-            --exclude ".git/" \
-            --exclude ".github/" \
-            --exclude ".idea/" \
-            --exclude ".pnpm-store/" \
-            --exclude "backend/**/bin/" \
-            --exclude "backend/**/obj/" \
-            --exclude "frontend/medicinator-web/node_modules/" \
-            --exclude "frontend/medicinator-web/dist/" \
-            --exclude "deploy/.env" \
-            --exclude "deploy/data/" \
-            ./ "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"
+          if [ -f package.json ] && corepack pnpm run | grep -q '^  typecheck'; then
+            corepack pnpm typecheck
+          else
+            echo "No Worker typecheck script configured."
+          fi
 
-      - name: Start API
+      - name: Apply D1 migrations
+        working-directory: ${{ env.CLOUDFLARE_WORKER_DIRECTORY }}
         run: |
-          ssh -i ~/.ssh/id_ed25519 -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
-            set -e
-            cd '$DEPLOY_PATH'
-            test -f deploy/.env
-            docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build --remove-orphans
-            docker image prune -f
-          "
+          env_args=()
+          if [ -n "$CLOUDFLARE_WORKER_ENV" ]; then
+            env_args=(--env "$CLOUDFLARE_WORKER_ENV")
+          fi
+
+          corepack pnpm dlx wrangler d1 migrations apply "$D1_DATABASE_NAME" --remote "${env_args[@]}"
+
+      - name: Sync Worker runtime settings
+        working-directory: ${{ env.CLOUDFLARE_WORKER_DIRECTORY }}
+        run: |
+          env_args=()
+          if [ -n "$CLOUDFLARE_WORKER_ENV" ]; then
+            env_args=(--env "$CLOUDFLARE_WORKER_ENV")
+          fi
+
+          if [ -n "$FIREBASE_PROJECT_ID" ]; then
+            printf '%s' "$FIREBASE_PROJECT_ID" | corepack pnpm dlx wrangler secret put FIREBASE_PROJECT_ID "${env_args[@]}"
+          fi
+
+          if [ -n "$FRONTEND_ORIGIN" ]; then
+            printf '%s' "$FRONTEND_ORIGIN" | corepack pnpm dlx wrangler secret put FRONTEND_ORIGIN "${env_args[@]}"
+          fi
+
+      - name: Deploy Worker
+        working-directory: ${{ env.CLOUDFLARE_WORKER_DIRECTORY }}
+        run: |
+          env_args=()
+          if [ -n "$CLOUDFLARE_WORKER_ENV" ]; then
+            env_args=(--env "$CLOUDFLARE_WORKER_ENV")
+          fi
+
+          corepack pnpm dlx wrangler deploy "${env_args[@]}"

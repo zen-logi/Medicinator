@@ -1,0 +1,12 @@
+name = "medicinator-api"
+main = "src/index.ts"
+compatibility_date = "2026-05-01"
+
+[vars]
+AUTH_DEV_BYPASS = "false"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "medicinator"
+database_id = "replace-with-d1-database-id"
+migrations_dir = "migrations"
