@@ -92,7 +92,7 @@ CLOUDFLARE_API_TOKEN=...
 - Disk: 標準永続ディスク
 - Firewall: SSH と API 公開に必要なポートだけ許可
 
-API は初期状態では `8080` を publish します。Cloudflare proxy やリバースプロキシを通す構成にしたら、VM firewall は必要最小限へ絞ってください。
+API は VM の `80` 番ポートで受け、コンテナ内の ASP.NET Core API `8080` 番ポートへ転送します。Cloudflare DNS の proxy を有効にし、VM firewall は SSH と HTTP だけを開けます。
 
 ### VM 初期設定
 
@@ -157,7 +157,7 @@ GitHub Actions を使う前に、手動で一度起動確認する場合:
 ```bash
 cd /opt/medicinator
 docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build
-curl -fsS http://localhost:8080/health
+curl -fsS http://localhost/health
 ```
 
 ## Backend 自動デプロイ
@@ -199,7 +199,7 @@ PRODUCTION_SSH_PRIVATE_KEY=-----BEGIN OPENSSH PRIVATE KEY-----
 - `app.example.com`: Cloudflare Pages の custom domain
 - `api.example.com`: VM の外部 IP へ proxy 有効の DNS record
 
-API は Firebase ID token を検証し、CORS は `MEDICINATOR_FRONTEND_ORIGIN` だけを許可します。`app.example.com` と `.env` の値を必ず一致させてください。
+API は Firebase ID token を検証し、CORS は `MEDICINATOR_FRONTEND_ORIGIN` だけを許可します。フロントエンドの実ドメインと `.env` の値を必ず一致させてください。
 
 ## 動作確認
 

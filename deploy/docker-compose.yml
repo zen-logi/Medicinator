@@ -12,11 +12,11 @@ services:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       ASPNETCORE_URLS: ${ASPNETCORE_URLS:-http://+:8080}
       Auth__FirebaseProjectId: ${FIREBASE_PROJECT_ID:-}
-      Cors__AllowedOrigins__0: ${MEDICINATOR_FRONTEND_ORIGIN:-https://medicinator.example.pages.dev}
+      Cors__AllowedOrigins__0: ${MEDICINATOR_FRONTEND_ORIGIN:-https://app.example.com}
       ConnectionStrings__DefaultConnection: ${MEDICINATOR_DB_CONNECTION:-Data Source=/data/medicinator.db}
       Database__ApplyMigrationsOnStartup: ${MEDICINATOR_APPLY_MIGRATIONS_ON_STARTUP:-true}
     ports:
-      - "8080:8080"
+      - "80:8080"
     volumes:
       - medicinator-data:/data
     healthcheck:
