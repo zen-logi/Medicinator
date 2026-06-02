@@ -8,10 +8,12 @@ import {
 } from "react";
 import {
   browserLocalPersistence,
+  createUserWithEmailAndPassword,
   onAuthStateChanged,
   setPersistence,
   signInWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
   signOut,
   type User,
 } from "firebase/auth";
@@ -26,6 +28,7 @@ type AuthContextValue = {
   user: User | null;
   loading: boolean;
   apiClient: ApiClient;
+  createAccountWithEmail(email: string, password: string): Promise<void>;
   signInWithEmail(email: string, password: string): Promise<void>;
   signInWithGoogle(): Promise<void>;
   logout(): Promise<void>;
@@ -64,6 +67,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       loading,
       apiClient,
+      async createAccountWithEmail(email, password) {
+        if (!auth) {
+          throw new Error("Firebase Auth is not configured.");
+        }
+        await createUserWithEmailAndPassword(auth, email, password);
+      },
       async signInWithEmail(email, password) {
         if (!auth) {
           throw new Error("Firebase Auth is not configured.");
@@ -74,7 +83,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!auth) {
           throw new Error("Firebase Auth is not configured.");
         }
-        await signInWithPopup(auth, googleProvider);
+        try {
+          await signInWithPopup(auth, googleProvider);
+        } catch (loginError) {
+          const code =
+            loginError instanceof Error && "code" in loginError
+              ? String(loginError.code)
+              : "";
+          if (
+            code === "auth/internal-error" ||
+            code === "auth/popup-blocked" ||
+            code === "auth/popup-closed-by-user" ||
+            code === "auth/cancelled-popup-request"
+          ) {
+            await signInWithRedirect(auth, googleProvider);
+            return;
+          }
+          throw loginError;
+        }
       },
       async logout() {
         if (auth) {

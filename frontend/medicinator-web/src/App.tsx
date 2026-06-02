@@ -5,7 +5,9 @@ import {
   HeartPulse,
   LogOut,
   Pill,
+  Plus,
   Settings,
+  Users,
 } from "lucide-react";
 import { LoginPanel } from "@/features/auth/LoginPanel";
 import { useAuth } from "@/features/auth/AuthProvider";
@@ -115,7 +117,7 @@ type ApiMedicine = {
 };
 
 type FamilyBootstrap = {
-  family: ApiFamily;
+  family?: ApiFamily;
   invites: ApiFamilyInvite[];
   medicines: ApiMedicine[];
   people: ApiPerson[];
@@ -132,6 +134,7 @@ export function App() {
   const [latestInviteCode, setLatestInviteCode] = useState<
     string | undefined
   >();
+  const [familyLoading, setFamilyLoading] = useState(false);
   const [records, setRecords] = useState<IntakeRecord[]>([]);
   const [settings, setSettings] = useState(initialFamilySettings);
   const [, setSyncState] = useState<"idle" | "saving" | "offline">("idle");
@@ -153,6 +156,7 @@ export function App() {
     let disposed = false;
 
     async function ensureFamily() {
+      setFamilyLoading(true);
       try {
         const bootstrapKey = user?.uid ?? "local-development-user";
         const bootstrap =
@@ -168,30 +172,12 @@ export function App() {
         familyBootstrapPromises.delete(bootstrapKey);
 
         if (!disposed) {
-          setFamilyId(family.id);
-          setFamilyInvites(apiInvites);
-          setSettings((current) => ({ ...current, familyName: family.name }));
-          setPeople(
-            apiPeople.map((person, index) => ({
-              id: person.id,
-              name: person.name,
-              relation: person.note ?? "家族",
-              color: ["#5b8f7b", "#d07a60", "#6f86b7", "#9777a8"][index % 4],
-            })),
-          );
-          setMedicines(
-            apiMedicines.map((medicine) => ({
-              id: medicine.id,
-              personId: medicine.personId,
-              name: medicine.name,
-              dosage: medicine.dosageLabel ?? "適量",
-              instructions: medicine.usage ?? "",
-              startDate: medicine.startsOn ?? toDateKey(new Date()),
-              endDate: medicine.endsOn,
-              timing: medicine.timingNames ?? ["afterBreakfast"],
-              stock: 0,
-            })),
-          );
+          applyFamilyBootstrap({
+            family,
+            invites: apiInvites,
+            medicines: apiMedicines,
+            people: apiPeople,
+          });
           setSyncState("idle");
         }
       } catch {
@@ -199,20 +185,19 @@ export function App() {
         if (!disposed) {
           setSyncState("offline");
         }
+      } finally {
+        if (!disposed) {
+          setFamilyLoading(false);
+        }
       }
     }
 
     async function bootstrapFamily(bootstrapKey: string) {
       const families = await apiClient.get<ApiFamily[]>("/api/families");
-      const family =
-        families[0] ??
-        (await apiClient.post<{ name: string; displayName: string }, ApiFamily>(
-          "/api/families",
-          {
-            displayName: user?.displayName ?? bootstrapKey,
-            name: initialFamilySettings.familyName,
-          },
-        ));
+      const family = families[0];
+      if (!family) {
+        return { invites: [], medicines: [], people: [] };
+      }
       const [apiPeople, apiMedicines] = await Promise.all([
         apiClient.get<ApiPerson[]>(`/api/families/${family.id}/people`),
         apiClient.get<ApiMedicine[]>(`/api/families/${family.id}/medicines`),
@@ -247,6 +232,98 @@ export function App() {
 
   if (isFirebaseConfigured && !user) {
     return <LoginPanel />;
+  }
+
+  if (familyLoading) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-background text-foreground">
+        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <HeartPulse
+            aria-hidden
+            className="h-5 w-5 animate-pulse text-primary"
+          />
+          Family を確認中
+        </div>
+      </main>
+    );
+  }
+
+  if (!familyId) {
+    return (
+      <FamilyOnboarding
+        displayName={user?.displayName ?? user?.email ?? "利用者"}
+        onCreateFamily={createFamily}
+        onJoinFamily={joinFamilyInvite}
+        onLogout={logout}
+      />
+    );
+  }
+
+  function applyFamilyBootstrap(bootstrap: FamilyBootstrap) {
+    if (!bootstrap.family) {
+      setFamilyId(undefined);
+      setFamilyInvites([]);
+      setLatestInviteCode(undefined);
+      setPeople([]);
+      setMedicines([]);
+      setRecords([]);
+      return;
+    }
+
+    setFamilyId(bootstrap.family.id);
+    setFamilyInvites(bootstrap.invites);
+    setLatestInviteCode(undefined);
+    setSettings((current) => ({
+      ...current,
+      familyName: bootstrap.family?.name ?? current.familyName,
+    }));
+    setPeople(
+      bootstrap.people.map((person, index) => ({
+        id: person.id,
+        name: person.name,
+        relation: person.note ?? "家族",
+        color: ["#5b8f7b", "#d07a60", "#6f86b7", "#9777a8"][index % 4],
+      })),
+    );
+    setMedicines(
+      bootstrap.medicines.map((medicine) => ({
+        id: medicine.id,
+        personId: medicine.personId,
+        name: medicine.name,
+        dosage: medicine.dosageLabel ?? "適量",
+        instructions: medicine.usage ?? "",
+        startDate: medicine.startsOn ?? toDateKey(new Date()),
+        endDate: medicine.endsOn,
+        timing: medicine.timingNames ?? ["afterBreakfast"],
+        stock: 0,
+      })),
+    );
+  }
+
+  async function createFamily(familyName: string) {
+    const bootstrapKey = user?.uid ?? "local-development-user";
+    setFamilyLoading(true);
+    setSyncState("saving");
+    try {
+      const family = await apiClient.post<
+        { name: string; displayName: string },
+        ApiFamily
+      >("/api/families", {
+        displayName: user?.displayName ?? user?.email ?? bootstrapKey,
+        name: familyName.trim(),
+      });
+      applyFamilyBootstrap({
+        family,
+        invites: [],
+        medicines: [],
+        people: [],
+      });
+      setSyncState("idle");
+    } catch {
+      setSyncState("offline");
+    } finally {
+      setFamilyLoading(false);
+    }
   }
 
   async function addRecord(
@@ -576,30 +653,12 @@ export function App() {
       ]);
 
       setFamilyId(family.id);
-      setFamilyInvites(apiInvites);
-      setLatestInviteCode(undefined);
-      setSettings((current) => ({ ...current, familyName: family.name }));
-      setPeople(
-        apiPeople.map((person, index) => ({
-          id: person.id,
-          name: person.name,
-          relation: person.note ?? "家族",
-          color: ["#5b8f7b", "#d07a60", "#6f86b7", "#9777a8"][index % 4],
-        })),
-      );
-      setMedicines(
-        apiMedicines.map((medicine) => ({
-          id: medicine.id,
-          personId: medicine.personId,
-          name: medicine.name,
-          dosage: medicine.dosageLabel ?? "適量",
-          instructions: medicine.usage ?? "",
-          startDate: medicine.startsOn ?? toDateKey(new Date()),
-          endDate: medicine.endsOn,
-          timing: medicine.timingNames ?? ["afterBreakfast"],
-          stock: 0,
-        })),
-      );
+      applyFamilyBootstrap({
+        family,
+        invites: apiInvites,
+        medicines: apiMedicines,
+        people: apiPeople,
+      });
       setSyncState("idle");
     } catch {
       setSyncState("offline");
@@ -719,6 +778,139 @@ export function App() {
             );
           })}
         </nav>
+      </div>
+    </main>
+  );
+}
+
+function FamilyOnboarding({
+  displayName,
+  onCreateFamily,
+  onJoinFamily,
+  onLogout,
+}: {
+  displayName: string;
+  onCreateFamily: (familyName: string) => Promise<void>;
+  onJoinFamily: (inviteCode: string) => Promise<void>;
+  onLogout: () => Promise<void>;
+}) {
+  const [familyName, setFamilyName] = useState(
+    displayName.endsWith("家") ? displayName : `${displayName}のFamily`,
+  );
+  const [inviteCode, setInviteCode] = useState("");
+  const [busy, setBusy] = useState<"create" | "join" | null>(null);
+
+  async function handleCreateFamily() {
+    if (familyName.trim().length === 0) {
+      return;
+    }
+    setBusy("create");
+    try {
+      await onCreateFamily(familyName);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleJoinFamily() {
+    if (inviteCode.trim().length === 0) {
+      return;
+    }
+    setBusy("join");
+    try {
+      await onJoinFamily(inviteCode);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <main className="auth-page min-h-screen overflow-hidden px-5 py-6 text-foreground sm:px-8">
+      <div className="auth-glow auth-glow-coral" aria-hidden />
+      <div className="auth-glow auth-glow-mint" aria-hidden />
+      <div className="mx-auto grid min-h-[calc(100vh-3rem)] w-full max-w-3xl place-items-center">
+        <section className="auth-card motion-sheet p-5 sm:p-6">
+          <div className="mb-6 flex items-start justify-between gap-4">
+            <div>
+              <p className="auth-kicker">
+                <Users aria-hidden className="h-4 w-4" />
+                family setup
+              </p>
+              <h1 className="mt-2 text-3xl font-semibold text-zinc-950">
+                Family を始める
+              </h1>
+              <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                服薬記録を共有する Family を作るか、招待コードで参加します
+              </p>
+            </div>
+            <Button
+              aria-label="ログアウト"
+              onClick={() => void onLogout()}
+              size="icon"
+              type="button"
+              variant="ghost"
+            >
+              <LogOut aria-hidden className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-lg border border-white/80 bg-white/70 p-4 shadow-[0_12px_26px_rgba(142,82,98,0.08)]">
+              <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-pink-100 text-pink-700">
+                <Plus aria-hidden className="h-5 w-5" />
+              </div>
+              <h2 className="text-lg font-semibold">Family を作る</h2>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                自分の Family を作って、あとから家族を招待できます
+              </p>
+              <label className="mt-4 block space-y-2 text-sm font-semibold">
+                <span>Family 名</span>
+                <input
+                  className="auth-input flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  onChange={(event) => setFamilyName(event.target.value)}
+                  value={familyName}
+                />
+              </label>
+              <Button
+                className="mt-4 w-full"
+                disabled={busy !== null || familyName.trim().length === 0}
+                onClick={() => void handleCreateFamily()}
+                type="button"
+              >
+                作成してはじめる
+              </Button>
+            </div>
+
+            <div className="rounded-lg border border-white/80 bg-white/70 p-4 shadow-[0_12px_26px_rgba(142,82,98,0.08)]">
+              <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+                <Users aria-hidden className="h-5 w-5" />
+              </div>
+              <h2 className="text-lg font-semibold">招待で参加する</h2>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                共有された招待コードを入力して既存 Family に参加します
+              </p>
+              <label className="mt-4 block space-y-2 text-sm font-semibold">
+                <span>招待コード</span>
+                <input
+                  className="auth-input flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm uppercase"
+                  inputMode="text"
+                  onChange={(event) => setInviteCode(event.target.value)}
+                  placeholder="ABCD EFGH ..."
+                  value={inviteCode}
+                />
+              </label>
+              <Button
+                className="mt-4 w-full"
+                disabled={busy !== null || inviteCode.trim().length === 0}
+                onClick={() => void handleJoinFamily()}
+                type="button"
+                variant="secondary"
+              >
+                招待コードで参加
+              </Button>
+            </div>
+          </div>
+        </section>
       </div>
     </main>
   );
