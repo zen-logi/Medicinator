@@ -52,9 +52,9 @@ jobs:
         working-directory: ${{ env.CLOUDFLARE_WORKER_DIRECTORY }}
         run: |
           if [ -f pnpm-lock.yaml ]; then
-            corepack pnpm install --frozen-lockfile
+            corepack pnpm install --frozen-lockfile --config.dangerouslyAllowAllBuilds=true
           elif [ -f package.json ]; then
-            corepack pnpm install
+            corepack pnpm install --config.dangerouslyAllowAllBuilds=true
           fi
 
       - name: Test
