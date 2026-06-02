@@ -1,0 +1,5 @@
+# GitHub の branch ruleset で「Require review from Code Owners」を有効化する
+# 必須レビュワーを変更する場合は、write 権限を持つユーザーまたは team に置き換える
+
+* @zen-logi
+

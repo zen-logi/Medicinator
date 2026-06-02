@@ -2,11 +2,47 @@ name: CI
 
 on:
   pull_request:
+    branches:
+      - main
+      - develop
   push:
     branches:
       - main
+      - develop
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  branch-policy:
+    name: Branch Policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce main source branch
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          BASE_REPOSITORY: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "Branch source policy is only enforced for pull requests."
+            exit 0
+          fi
+
+          if [ "$BASE_REF" = "main" ] && { [ "$HEAD_REF" != "develop" ] || [ "$HEAD_REPOSITORY" != "$BASE_REPOSITORY" ]; }; then
+            echo "Pull requests into main must come from develop in the same repository."
+            echo "Current head: $HEAD_REPOSITORY:$HEAD_REF"
+            exit 1
+          fi
+
+          echo "Branch source policy passed."
+
   backend:
     name: Backend
     runs-on: ubuntu-latest
@@ -21,6 +57,30 @@ jobs:
 
       - name: Test
         run: dotnet test Medicinator.slnx --configuration Release
+
+  frontend-format:
+    name: Frontend Format
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/medicinator-web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install
+        run: corepack pnpm install --frozen-lockfile --config.dangerouslyAllowAllBuilds=true
+
+      - name: Format Check
+        run: corepack pnpm format:check
 
   frontend:
     name: Frontend
@@ -45,3 +105,30 @@ jobs:
 
       - name: Build
         run: corepack pnpm build
+
+  worker-api:
+    name: Worker API
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workers/medicinator-api
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install
+        run: corepack pnpm install --frozen-lockfile --config.dangerouslyAllowAllBuilds=true
+
+      - name: Typecheck
+        run: corepack pnpm typecheck
+
+      - name: Test
+        run: corepack pnpm test
