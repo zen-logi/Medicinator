@@ -28,6 +28,10 @@ function getLoginErrorMessage(loginError: unknown) {
       return "メールアドレスを入力してください";
     case "auth/missing-password":
       return "パスワードを入力してください";
+    case "auth/email-already-in-use":
+      return "このメールアドレスはすでに登録されています。ログインを選んでください";
+    case "auth/weak-password":
+      return "パスワードは6文字以上で入力してください";
     case "auth/operation-not-allowed":
       return "このログイン方法が Firebase で有効になっていません";
     case "auth/popup-closed-by-user":
@@ -44,17 +48,23 @@ function getLoginErrorMessage(loginError: unknown) {
 }
 
 export function LoginPanel() {
-  const { signInWithEmail, signInWithGoogle } = useAuth();
+  const { createAccountWithEmail, signInWithEmail, signInWithGoogle } =
+    useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState<"login" | "signup">("login");
 
   async function handleEmailLogin(event: FormEvent) {
     event.preventDefault();
     setError(null);
     setBusy(true);
     try {
+      if (mode === "signup") {
+        await createAccountWithEmail(email, password);
+        return;
+      }
       await signInWithEmail(email, password);
     } catch (loginError) {
       setError(getLoginErrorMessage(loginError));
@@ -137,11 +147,45 @@ export function LoginPanel() {
                 family medication care
               </p>
               <h1>Medicinator</h1>
-              <p>家族の服薬を、落ち着いて一緒に見守る記録アプリ</p>
+              <p>
+                {mode === "signup"
+                  ? "アカウント作成後に Family を作るか、招待コードで参加できます"
+                  : "家族の服薬を、落ち着いて一緒に見守る記録アプリ"}
+              </p>
             </div>
           </div>
 
           <div className="auth-form">
+            <div className="mb-4 grid grid-cols-2 rounded-lg bg-white/70 p-1 text-sm font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+              <button
+                className={`motion-press rounded-md px-3 py-2 transition-colors ${
+                  mode === "login"
+                    ? "bg-white text-pink-700 shadow-[0_8px_18px_rgba(234,115,149,0.14)]"
+                    : "text-zinc-500 hover:text-pink-700"
+                }`}
+                onClick={() => {
+                  setError(null);
+                  setMode("login");
+                }}
+                type="button"
+              >
+                ログイン
+              </button>
+              <button
+                className={`motion-press rounded-md px-3 py-2 transition-colors ${
+                  mode === "signup"
+                    ? "bg-white text-pink-700 shadow-[0_8px_18px_rgba(234,115,149,0.14)]"
+                    : "text-zinc-500 hover:text-pink-700"
+                }`}
+                onClick={() => {
+                  setError(null);
+                  setMode("signup");
+                }}
+                type="button"
+              >
+                アカウント作成
+              </button>
+            </div>
             {!isFirebaseConfigured && (
               <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
                 Firebase の環境変数を設定するとログインできます。
@@ -179,7 +223,9 @@ export function LoginPanel() {
                 type="submit"
               >
                 <Mail aria-hidden className="h-4 w-4" />
-                メールでログイン
+                {mode === "signup"
+                  ? "メールでアカウント作成"
+                  : "メールでログイン"}
               </Button>
             </form>
             <Button
