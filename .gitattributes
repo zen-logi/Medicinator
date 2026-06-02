@@ -1,0 +1,4 @@
+frontend/medicinator-web/src/**/*.ts text eol=lf
+frontend/medicinator-web/src/**/*.tsx text eol=lf
+frontend/medicinator-web/src/**/*.css text eol=lf
+frontend/medicinator-web/.prettierrc.json text eol=lf
