@@ -12,6 +12,37 @@ import { Input } from "@/shared/components/input";
 import { isFirebaseConfigured } from "@/shared/api/firebase";
 import { useAuth } from "./AuthProvider";
 
+function getLoginErrorMessage(loginError: unknown) {
+  if (!(loginError instanceof Error)) {
+    return "ログインに失敗しました。時間をおいてもう一度お試しください";
+  }
+
+  const code = "code" in loginError ? String(loginError.code) : "";
+
+  switch (code) {
+    case "auth/invalid-credential":
+    case "auth/user-not-found":
+    case "auth/wrong-password":
+      return "メールアドレスまたはパスワードが違います";
+    case "auth/missing-email":
+      return "メールアドレスを入力してください";
+    case "auth/missing-password":
+      return "パスワードを入力してください";
+    case "auth/operation-not-allowed":
+      return "このログイン方法が Firebase で有効になっていません";
+    case "auth/popup-closed-by-user":
+      return "Google ログインがキャンセルされました";
+    case "auth/unauthorized-domain":
+      return "このドメインは Firebase Auth で許可されていません";
+    case "auth/api-key-not-valid.-please-pass-a-valid-api-key.":
+    case "auth/invalid-api-key":
+    case "auth/internal-error":
+      return "Firebase の設定を確認してください。API key、Auth domain、Authorized domains が一致していない可能性があります";
+    default:
+      return "ログインに失敗しました。設定または入力内容を確認してください";
+  }
+}
+
 export function LoginPanel() {
   const { signInWithEmail, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState("");
@@ -26,11 +57,7 @@ export function LoginPanel() {
     try {
       await signInWithEmail(email, password);
     } catch (loginError) {
-      setError(
-        loginError instanceof Error
-          ? loginError.message
-          : "ログインに失敗しました",
-      );
+      setError(getLoginErrorMessage(loginError));
     } finally {
       setBusy(false);
     }
@@ -42,11 +69,7 @@ export function LoginPanel() {
     try {
       await signInWithGoogle();
     } catch (loginError) {
-      setError(
-        loginError instanceof Error
-          ? loginError.message
-          : "ログインに失敗しました",
-      );
+      setError(getLoginErrorMessage(loginError));
     } finally {
       setBusy(false);
     }
