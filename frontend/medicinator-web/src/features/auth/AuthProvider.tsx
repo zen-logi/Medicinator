@@ -9,10 +9,10 @@ import {
 import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
+  getRedirectResult,
   onAuthStateChanged,
   setPersistence,
   signInWithEmailAndPassword,
-  signInWithPopup,
   signInWithRedirect,
   signOut,
   type User,
@@ -48,6 +48,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     void setPersistence(auth, browserLocalPersistence);
+    void getRedirectResult(auth).catch((error: unknown) => {
+      console.error("Firebase redirect sign-in failed", error);
+    });
+
     return onAuthStateChanged(auth, (nextUser) => {
       setUser(nextUser);
       setLoading(false);
@@ -83,24 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!auth) {
           throw new Error("Firebase Auth is not configured.");
         }
-        try {
-          await signInWithPopup(auth, googleProvider);
-        } catch (loginError) {
-          const code =
-            loginError instanceof Error && "code" in loginError
-              ? String(loginError.code)
-              : "";
-          if (
-            code === "auth/internal-error" ||
-            code === "auth/popup-blocked" ||
-            code === "auth/popup-closed-by-user" ||
-            code === "auth/cancelled-popup-request"
-          ) {
-            await signInWithRedirect(auth, googleProvider);
-            return;
-          }
-          throw loginError;
-        }
+        await signInWithRedirect(auth, googleProvider);
       },
       async logout() {
         if (auth) {
