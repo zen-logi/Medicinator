@@ -50,6 +50,22 @@ corepack pnpm dlx wrangler login
 
 Workers API は Firebase プロジェクト ID を環境変数 `FIREBASE_PROJECT_ID` として受け取り、Firebase ID token を検証する。サービスアカウントキーは不要。フロントエンドへ渡す Firebase Web Config は公開前提の値だが、Cloudflare API Token や署名鍵などの秘密値は secrets に入れる。
 
+### Firebase Auth 確認項目
+
+ログイン時に `auth/internal-error` が出る場合は、アプリの入力値ではなく Firebase 設定の不整合を疑う。
+
+- Firebase Console の `Authentication` -> `Sign-in method` で使う provider を有効化する
+  - メールログインを使う場合: `Email/Password`
+  - Google ログインを使う場合: `Google`
+- Firebase Console の `Authentication` -> `Settings` -> `Authorized domains` に実際のフロントエンドドメインを追加する
+  - 例: `app.example.com`
+  - Cloudflare Pages の検証中は `*.pages.dev` の実ホスト名も追加する
+  - ローカル確認用は `localhost` を追加する
+- Cloudflare Pages の environment variables には Firebase Web Config の値をそのまま入れる
+  - `VITE_FIREBASE_AUTH_DOMAIN` は通常 `your-project.firebaseapp.com`
+  - Google Cloud OAuth の `ウェブ クライアント ID` や `ウェブ クライアント シークレット` はここには入れない
+- `VITE_FIREBASE_PROJECT_ID` と Worker の `FIREBASE_PROJECT_ID` は同じ Firebase project id にする
+
 Frontend repository variables:
 
 ```text
