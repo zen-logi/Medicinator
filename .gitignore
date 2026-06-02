@@ -1,0 +1,101 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*.swo
+
+# Logs / diagnostics
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+TestResults/
+coverage/
+coverage-*/
+*.trx
+
+# .NET
+bin/
+obj/
+artifacts/
+*.user
+*.suo
+*.rsuser
+*.nupkg
+*.snupkg
+*.coverage
+*.coveragexml
+*.vsp
+*.vspx
+
+# ASP.NET local configuration
+appsettings.Local.json
+appsettings.Development.local.json
+appsettings.Production.local.json
+secrets.json
+
+# Node / pnpm / Vite
+node_modules/
+.pnpm-store/
+dist/
+build/
+.vite/
+.turbo/
+.eslintcache
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.*
+!.env.example
+deploy/.env
+deploy/.env.*
+!deploy/.env.example
+frontend/**/.env
+frontend/**/.env.*
+!frontend/**/.env.example
+
+# Local databases and runtime volumes
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+deploy/data/
+
+# Docker / deploy local overrides
+docker-compose.override.yml
+compose.override.yml
+
+# Certificates and private keys
+*.pem
+*.key
+*.pfx
+*.p12
+*.crt
+*.cer
+*.csr
+*serviceAccount*.json
+*credentials*.json
+*secret*.json
+firebase-adminsdk*.json
+
+# Generated QA artifacts
+playwright-report/
+test-results/
+.playwright/
+frontend/**/playwright-report/
+frontend/**/test-results/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak

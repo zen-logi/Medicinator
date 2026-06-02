@@ -1,0 +1,68 @@
+name: Deploy Backend
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - "deploy/**"
+      - ".github/workflows/deploy-backend.yml"
+
+jobs:
+  deploy:
+    name: GCP VM
+    runs-on: ubuntu-latest
+    env:
+      SSH_HOST: ${{ secrets.PRODUCTION_SSH_HOST }}
+      SSH_PORT: ${{ secrets.PRODUCTION_SSH_PORT || '22' }}
+      SSH_USER: ${{ secrets.PRODUCTION_SSH_USER }}
+      DEPLOY_PATH: ${{ vars.PRODUCTION_DEPLOY_PATH || '/opt/medicinator' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Test
+        run: dotnet test Medicinator.slnx --configuration Release
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Prepare remote directory
+        run: ssh -i ~/.ssh/id_ed25519 -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "mkdir -p '$DEPLOY_PATH'"
+
+      - name: Upload application
+        run: |
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/id_ed25519 -p $SSH_PORT" \
+            --exclude ".git/" \
+            --exclude ".github/" \
+            --exclude ".idea/" \
+            --exclude ".pnpm-store/" \
+            --exclude "backend/**/bin/" \
+            --exclude "backend/**/obj/" \
+            --exclude "frontend/medicinator-web/node_modules/" \
+            --exclude "frontend/medicinator-web/dist/" \
+            --exclude "deploy/.env" \
+            --exclude "deploy/data/" \
+            ./ "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"
+
+      - name: Start API
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "
+            set -e
+            cd '$DEPLOY_PATH'
+            test -f deploy/.env
+            docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build --remove-orphans
+            docker image prune -f
+          "
