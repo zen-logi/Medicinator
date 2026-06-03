@@ -97,7 +97,7 @@ export function PeopleList({
           <CardTitle>飲む人</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             {people.map((person) => (
               <div
                 className="flex items-center gap-3 rounded-lg border border-zinc-100 bg-white p-4"
@@ -109,7 +109,7 @@ export function PeopleList({
                 >
                   <UserRound aria-hidden className="h-5 w-5" />
                 </div>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-[7rem] flex-1">
                   {editingId === person.id ? (
                     <div className="space-y-2">
                       <Input

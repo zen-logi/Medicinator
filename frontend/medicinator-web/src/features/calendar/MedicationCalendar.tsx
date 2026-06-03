@@ -91,18 +91,21 @@ export function MedicationCalendar({
   }
 
   return (
-    <section className="space-y-8">
+    <section className="space-y-5">
       <div className="flex items-center justify-between gap-3">
-        <button
-          className="cute-pill px-4 py-2 text-sm font-semibold text-pink-700"
-          onClick={() => onSelectDate(toDateKey(new Date()))}
-          type="button"
-        >
-          今日
-        </button>
-        <div className="flex gap-2">
+        <h2 className="text-2xl font-semibold tracking-normal text-zinc-950 sm:text-3xl">
+          {selected.getFullYear()}年 {selected.getMonth() + 1}月
+        </h2>
+        <div className="flex items-center gap-2">
           <button
-            className="cute-pill p-3 text-pink-700"
+            className="cute-pill px-3 py-2 text-sm font-semibold text-pink-700"
+            onClick={() => onSelectDate(toDateKey(new Date()))}
+            type="button"
+          >
+            今日
+          </button>
+          <button
+            className="cute-pill p-2.5 text-pink-700"
             onClick={() => moveMonth(-1)}
             type="button"
             aria-label="前の月"
@@ -110,7 +113,7 @@ export function MedicationCalendar({
             <ChevronLeft aria-hidden className="h-5 w-5" />
           </button>
           <button
-            className="cute-pill p-3 text-pink-700"
+            className="cute-pill p-2.5 text-pink-700"
             onClick={() => moveMonth(1)}
             type="button"
             aria-label="次の月"
@@ -118,12 +121,6 @@ export function MedicationCalendar({
             <ChevronRight aria-hidden className="h-5 w-5" />
           </button>
         </div>
-      </div>
-
-      <div>
-        <h2 className="text-3xl font-semibold tracking-normal text-zinc-950 sm:text-4xl">
-          {selected.getFullYear()}年 {selected.getMonth() + 1}月
-        </h2>
       </div>
 
       <div className="cute-surface rounded-lg p-4">
@@ -149,7 +146,7 @@ export function MedicationCalendar({
 
             return (
               <button
-                className={`motion-press min-h-14 rounded-lg p-2 text-center transition-all ${
+                className={`motion-press min-h-12 rounded-lg p-1.5 text-center transition-all ${
                   active
                     ? "border-2 border-pink-300 bg-pink-50 text-pink-700"
                     : inMonth
@@ -184,7 +181,7 @@ export function MedicationCalendar({
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-2xl font-semibold text-zinc-950">
+        <h3 className="text-xl font-semibold text-zinc-950">
           {selected.toLocaleDateString("ja-JP", {
             weekday: "short",
             month: "long",

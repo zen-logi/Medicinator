@@ -42,6 +42,7 @@ type PersonResponse = {
 type MedicineResponse = {
   id: string;
   personId: string;
+  prescribedQuantity: number;
   timingNames: string[];
 };
 
@@ -121,6 +122,7 @@ describe("Medicinator Worker API", () => {
         personId: person.id,
         name: "アムロジピン",
         dosageLabel: "5mg / 1錠",
+        prescribedQuantity: 28,
         usage: "食後",
         startsOn: "2026-06-01",
         endsOn: null,
@@ -129,6 +131,7 @@ describe("Medicinator Worker API", () => {
     }));
 
     expect(medicine.personId).toBe(person.id);
+    expect(medicine.prescribedQuantity).toBe(28);
     expect(medicine.timingNames).toEqual(["夕食後", "朝食後"]);
 
     const intake = await json<IntakeResponse>(await request(env, `/api/families/${family.id}/intakes`, {

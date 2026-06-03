@@ -111,14 +111,26 @@ type ApiMedicine = {
   name: string;
   dosageLabel?: string;
   usage?: string;
+  prescribedQuantity?: number | null;
   startsOn?: string;
   endsOn?: string;
   timingNames?: IntakeTiming[];
 };
 
+type ApiIntake = {
+  id: string;
+  familyId: string;
+  personId: string;
+  medicineId: string;
+  takenAt: string;
+  timingName: IntakeTiming;
+  note?: string | null;
+};
+
 type FamilyBootstrap = {
   family?: ApiFamily;
   invites: ApiFamilyInvite[];
+  intakes: ApiIntake[];
   medicines: ApiMedicine[];
   people: ApiPerson[];
 };
@@ -165,6 +177,7 @@ export function App() {
         familyBootstrapPromises.set(bootstrapKey, bootstrap);
         const {
           family,
+          intakes: apiIntakes,
           invites: apiInvites,
           medicines: apiMedicines,
           people: apiPeople,
@@ -174,6 +187,7 @@ export function App() {
         if (!disposed) {
           applyFamilyBootstrap({
             family,
+            intakes: apiIntakes,
             invites: apiInvites,
             medicines: apiMedicines,
             people: apiPeople,
@@ -196,17 +210,24 @@ export function App() {
       const families = await apiClient.get<ApiFamily[]>("/api/families");
       const family = families[0];
       if (!family) {
-        return { invites: [], medicines: [], people: [] };
+        return { intakes: [], invites: [], medicines: [], people: [] };
       }
-      const [apiPeople, apiMedicines] = await Promise.all([
+      const [apiPeople, apiMedicines, apiIntakes] = await Promise.all([
         apiClient.get<ApiPerson[]>(`/api/families/${family.id}/people`),
         apiClient.get<ApiMedicine[]>(`/api/families/${family.id}/medicines`),
+        apiClient.get<ApiIntake[]>(`/api/families/${family.id}/intakes`),
       ]);
       const invites = await apiClient
         .get<ApiFamilyInvite[]>(`/api/families/${family.id}/invites`)
         .catch(() => []);
 
-      return { family, invites, medicines: apiMedicines, people: apiPeople };
+      return {
+        family,
+        intakes: apiIntakes,
+        invites,
+        medicines: apiMedicines,
+        people: apiPeople,
+      };
     }
 
     void ensureFamily();
@@ -295,7 +316,18 @@ export function App() {
         startDate: medicine.startsOn ?? toDateKey(new Date()),
         endDate: medicine.endsOn,
         timing: medicine.timingNames ?? ["afterBreakfast"],
-        stock: 0,
+        stock: medicine.prescribedQuantity ?? 0,
+      })),
+    );
+    setRecords(
+      bootstrap.intakes.map((intake) => ({
+        id: intake.id,
+        personId: intake.personId,
+        medicineId: intake.medicineId,
+        takenAt: intake.takenAt,
+        timing: intake.timingName,
+        status: "taken",
+        memo: intake.note ?? undefined,
       })),
     );
   }
@@ -314,6 +346,7 @@ export function App() {
       });
       applyFamilyBootstrap({
         family,
+        intakes: [],
         invites: [],
         medicines: [],
         people: [],
@@ -326,7 +359,7 @@ export function App() {
     }
   }
 
-  async function addRecord(
+  async function upsertRecord(
     input: Pick<
       IntakeRecord,
       "medicineId" | "personId" | "status" | "timing" | "memo"
@@ -346,7 +379,7 @@ export function App() {
         throw new Error("Family is not ready.");
       }
 
-      const response = await apiClient.post<
+      const response = await apiClient.put<
         {
           medicineId: string;
           timingName: IntakeTiming;
@@ -393,7 +426,7 @@ export function App() {
     );
 
     if (taken) {
-      void addRecord(
+      void upsertRecord(
         {
           medicineId: medicine.id,
           personId: medicine.personId,
@@ -529,6 +562,7 @@ export function App() {
     instructions: string;
     name: string;
     personId: string;
+    prescribedQuantity: number;
     startDate: string;
     timing: IntakeTiming[];
   }) {
@@ -545,6 +579,7 @@ export function App() {
           endsOn?: string;
           usage: string;
           name: string;
+          prescribedQuantity: number;
           startsOn: string;
           timingNames: IntakeTiming[];
         },
@@ -555,6 +590,7 @@ export function App() {
         usage: input.instructions.trim(),
         name: input.name.trim(),
         personId: input.personId,
+        prescribedQuantity: input.prescribedQuantity,
         startsOn: input.startDate,
         timingNames: input.timing,
       });
@@ -567,7 +603,7 @@ export function App() {
         startDate: response.startsOn ?? input.startDate,
         endDate: response.endsOn ?? input.endDate,
         timing: response.timingNames ?? input.timing,
-        stock: 0,
+        stock: response.prescribedQuantity ?? input.prescribedQuantity,
       };
 
       setMedicines((current) => [...current, medicine]);
@@ -582,10 +618,94 @@ export function App() {
         startDate: input.startDate,
         endDate: input.endDate,
         timing: input.timing,
-        stock: 0,
+        stock: input.prescribedQuantity,
       };
 
       setMedicines((current) => [...current, medicine]);
+      setSyncState("offline");
+    }
+  }
+
+  async function updateMedicine(
+    medicineId: string,
+    input: {
+      dosage: string;
+      endDate?: string;
+      instructions: string;
+      name: string;
+      personId: string;
+      prescribedQuantity: number;
+      startDate: string;
+      timing: IntakeTiming[];
+    },
+  ) {
+    const previousMedicines = medicines;
+    const optimisticMedicine: Medicine = {
+      id: medicineId,
+      personId: input.personId,
+      name: input.name.trim(),
+      dosage: input.dosage.trim() || "適量",
+      instructions: input.instructions.trim(),
+      startDate: input.startDate,
+      endDate: input.endDate,
+      timing: input.timing,
+      stock: input.prescribedQuantity,
+    };
+
+    setMedicines((current) =>
+      current.map((medicine) =>
+        medicine.id === medicineId ? optimisticMedicine : medicine,
+      ),
+    );
+    setSyncState("saving");
+    try {
+      if (!familyId) {
+        throw new Error("Family is not ready.");
+      }
+
+      const response = await apiClient.put<
+        {
+          personId: string;
+          dosageLabel: string;
+          endsOn?: string;
+          usage: string;
+          name: string;
+          prescribedQuantity: number;
+          startsOn: string;
+          timingNames: IntakeTiming[];
+        },
+        ApiMedicine
+      >(`/api/families/${familyId}/medicines/${medicineId}`, {
+        dosageLabel: input.dosage.trim() || "適量",
+        endsOn: input.endDate,
+        usage: input.instructions.trim(),
+        name: input.name.trim(),
+        personId: input.personId,
+        prescribedQuantity: input.prescribedQuantity,
+        startsOn: input.startDate,
+        timingNames: input.timing,
+      });
+
+      setMedicines((current) =>
+        current.map((medicine) =>
+          medicine.id === medicineId
+            ? {
+                id: response.id,
+                personId: response.personId,
+                name: response.name,
+                dosage: response.dosageLabel ?? "適量",
+                instructions: response.usage ?? input.instructions,
+                startDate: response.startsOn ?? input.startDate,
+                endDate: response.endsOn ?? input.endDate,
+                timing: response.timingNames ?? input.timing,
+                stock: response.prescribedQuantity ?? input.prescribedQuantity,
+              }
+            : medicine,
+        ),
+      );
+      setSyncState("idle");
+    } catch {
+      setMedicines(previousMedicines);
       setSyncState("offline");
     }
   }
@@ -644,17 +764,20 @@ export function App() {
         displayName: user?.displayName ?? bootstrapKey,
         inviteCode,
       });
-      const [apiPeople, apiMedicines, apiInvites] = await Promise.all([
-        apiClient.get<ApiPerson[]>(`/api/families/${family.id}/people`),
-        apiClient.get<ApiMedicine[]>(`/api/families/${family.id}/medicines`),
-        apiClient
-          .get<ApiFamilyInvite[]>(`/api/families/${family.id}/invites`)
-          .catch(() => []),
-      ]);
+      const [apiPeople, apiMedicines, apiIntakes, apiInvites] =
+        await Promise.all([
+          apiClient.get<ApiPerson[]>(`/api/families/${family.id}/people`),
+          apiClient.get<ApiMedicine[]>(`/api/families/${family.id}/medicines`),
+          apiClient.get<ApiIntake[]>(`/api/families/${family.id}/intakes`),
+          apiClient
+            .get<ApiFamilyInvite[]>(`/api/families/${family.id}/invites`)
+            .catch(() => []),
+        ]);
 
       setFamilyId(family.id);
       applyFamilyBootstrap({
         family,
+        intakes: apiIntakes,
         invites: apiInvites,
         medicines: apiMedicines,
         people: apiPeople,
@@ -667,8 +790,8 @@ export function App() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 px-5 pb-28 pt-6 sm:px-8 lg:px-10">
-        <header className="space-y-7 pb-2">
+      <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-5 pb-28 pt-5 sm:px-8 lg:px-10">
+        <header className="space-y-4 pb-1">
           <div className="flex items-center justify-between gap-3">
             <div className="inline-flex min-w-0 items-center gap-2 rounded-full border border-white/80 bg-emerald-50/90 px-3.5 py-2 text-sm shadow-[0_8px_22px_rgba(116,190,176,0.16)]">
               <HeartPulse
@@ -698,7 +821,7 @@ export function App() {
               <p className="text-sm font-semibold text-zinc-400">
                 {todayLabel}
               </p>
-              <h1 className="mt-2 truncate text-4xl font-semibold tracking-normal text-zinc-950 sm:text-5xl">
+              <h1 className="mt-1.5 truncate text-3xl font-semibold tracking-normal text-zinc-950 sm:text-4xl">
                 {activeTabLabel}
               </h1>
             </div>
@@ -728,6 +851,7 @@ export function App() {
             <MedicineList
               medicines={medicines}
               onAdd={addMedicine}
+              onUpdate={updateMedicine}
               people={people}
             />
           )}
