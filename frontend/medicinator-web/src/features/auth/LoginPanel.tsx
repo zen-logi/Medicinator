@@ -48,23 +48,18 @@ function getLoginErrorMessage(loginError: unknown) {
 }
 
 export function LoginPanel() {
-<<<<<<< Updated upstream
   const { createAccountWithEmail, signInWithEmail, signInWithGoogle } =
     useAuth();
-=======
-  const {
-    authError,
-    clearAuthError,
     createAccountWithEmail,
     signInWithEmail,
     signInWithGoogle,
   } = useAuth();
->>>>>>> Stashed changes
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState<"login" | "signup">("login");
+  const visibleError = error ?? authError;
 
   function clearErrors() {
     setError(null);
@@ -237,7 +232,9 @@ export function LoginPanel() {
                   value={password}
                 />
               </label>
-              {error && <p className="text-sm text-destructive">{error}</p>}
+              {visibleError && (
+                <p className="text-sm text-destructive">{visibleError}</p>
+              )}
               <Button
                 className="auth-submit w-full"
                 disabled={!isFirebaseConfigured || busy}
