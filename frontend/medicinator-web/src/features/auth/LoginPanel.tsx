@@ -41,15 +41,16 @@ function getLoginErrorMessage(loginError: unknown) {
     case "auth/api-key-not-valid.-please-pass-a-valid-api-key.":
     case "auth/invalid-api-key":
     case "auth/internal-error":
-      return "Firebase の設定を確認してください。API key、Auth domain、Authorized domains が一致していない可能性があります";
+      return `Firebase の設定を確認してください (${code})`;
     default:
-      return "ログインに失敗しました。設定または入力内容を確認してください";
+      return `ログインに失敗しました${code ? ` (${code})` : ""}`;
   }
 }
 
 export function LoginPanel() {
   const {
     authError,
+    clearAuthError,
     createAccountWithEmail,
     signInWithEmail,
     signInWithGoogle,
@@ -61,9 +62,14 @@ export function LoginPanel() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const visibleError = error ?? authError;
 
+  function clearErrors() {
+    setError(null);
+    clearAuthError();
+  }
+
   async function handleEmailLogin(event: FormEvent) {
     event.preventDefault();
-    setError(null);
+    clearErrors();
     setBusy(true);
     try {
       if (mode === "signup") {
@@ -79,7 +85,7 @@ export function LoginPanel() {
   }
 
   async function handleGoogleLogin() {
-    setError(null);
+    clearErrors();
     setBusy(true);
     try {
       await signInWithGoogle();
@@ -169,7 +175,7 @@ export function LoginPanel() {
                     : "text-zinc-500 hover:text-pink-700"
                 }`}
                 onClick={() => {
-                  setError(null);
+                  clearErrors();
                   setMode("login");
                 }}
                 type="button"
@@ -183,7 +189,7 @@ export function LoginPanel() {
                     : "text-zinc-500 hover:text-pink-700"
                 }`}
                 onClick={() => {
-                  setError(null);
+                  clearErrors();
                   setMode("signup");
                 }}
                 type="button"
@@ -204,7 +210,10 @@ export function LoginPanel() {
                   className="auth-input"
                   disabled={!isFirebaseConfigured || busy}
                   inputMode="email"
-                  onChange={(event) => setEmail(event.target.value)}
+                  onChange={(event) => {
+                    clearErrors();
+                    setEmail(event.target.value);
+                  }}
                   placeholder="name@example.com"
                   type="email"
                   value={email}
@@ -216,7 +225,10 @@ export function LoginPanel() {
                   autoComplete="current-password"
                   className="auth-input"
                   disabled={!isFirebaseConfigured || busy}
-                  onChange={(event) => setPassword(event.target.value)}
+                  onChange={(event) => {
+                    clearErrors();
+                    setPassword(event.target.value);
+                  }}
                   type="password"
                   value={password}
                 />
