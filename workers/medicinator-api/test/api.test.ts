@@ -5,7 +5,13 @@ import type { Env } from "../src/types";
 
 type FamilyResponse = { id: string; name: string; role: number };
 type PersonResponse = { id: string; familyId: string; name: string; note: string | null };
-type MedicineResponse = { id: string; familyId: string; personId: string; timingNames: string[] };
+type MedicineResponse = {
+  id: string;
+  familyId: string;
+  personId: string;
+  prescribedQuantity: number;
+  timingNames: string[];
+};
 type IntakeResponse = {
   id: string;
   familyId: string;
@@ -199,6 +205,7 @@ async function createMedicine(env: Env, familyId: string, personId: string, user
       personId,
       name: "Morning tablet",
       dosageLabel: "10mg",
+      prescribedQuantity: 14,
       usage: "After breakfast",
       startsOn: "2026-06-01",
       endsOn: null,
@@ -206,7 +213,9 @@ async function createMedicine(env: Env, familyId: string, personId: string, user
     }),
   }, user);
   expect(response.status).toBe(201);
-  return json<MedicineResponse>(response);
+  const medicine = await json<MedicineResponse>(response);
+  expect(medicine.prescribedQuantity).toBe(14);
+  return medicine;
 }
 
 async function createInvite(env: Env, familyId: string, user: string) {

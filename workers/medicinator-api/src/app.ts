@@ -44,6 +44,7 @@ type MedicineRow = {
   name: string;
   dosage_label: string;
   usage: string;
+  prescribed_quantity: number;
   starts_on: string;
   ends_on: string | null;
   created_at: string;
@@ -486,6 +487,7 @@ type MedicineRequest = {
   name?: string;
   dosageLabel?: string;
   usage?: string;
+  prescribedQuantity?: number | null;
   startsOn?: string;
   endsOn?: string | null;
   timingNames?: string[];
@@ -504,6 +506,7 @@ async function saveMedicine(db: D1Database, familyId: string, id: string, body: 
   const personId = requireText(body.personId, "personId");
   await requirePerson(db, familyId, personId);
   const timingNames = normalizeTimingNames(body.timingNames ?? []);
+  const prescribedQuantity = normalizePrescribedQuantity(body.prescribedQuantity);
   if (timingNames.length === 0) {
     throw badRequest("timingNames is required");
   }
@@ -511,15 +514,15 @@ async function saveMedicine(db: D1Database, familyId: string, id: string, body: 
   if (update) {
     await run(
       db,
-      "UPDATE medicines SET person_id = ?, name = ?, dosage_label = ?, usage = ?, starts_on = ?, ends_on = ? WHERE id = ? AND family_id = ?",
-      [personId, requireText(body.name, "name"), requireText(body.dosageLabel, "dosageLabel"), requireText(body.usage, "usage"), requireText(body.startsOn, "startsOn"), body.endsOn ?? null, id, familyId],
+      "UPDATE medicines SET person_id = ?, name = ?, dosage_label = ?, usage = ?, prescribed_quantity = ?, starts_on = ?, ends_on = ? WHERE id = ? AND family_id = ?",
+      [personId, requireText(body.name, "name"), requireText(body.dosageLabel, "dosageLabel"), requireText(body.usage, "usage"), prescribedQuantity, requireText(body.startsOn, "startsOn"), body.endsOn ?? null, id, familyId],
     );
     await run(db, "DELETE FROM medicine_schedule_timings WHERE medicine_id = ?", [id]);
   } else {
     await run(
       db,
-      "INSERT INTO medicines (id, family_id, person_id, name, dosage_label, usage, starts_on, ends_on, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      [id, familyId, personId, requireText(body.name, "name"), requireText(body.dosageLabel, "dosageLabel"), requireText(body.usage, "usage"), requireText(body.startsOn, "startsOn"), body.endsOn ?? null, nowIso()],
+      "INSERT INTO medicines (id, family_id, person_id, name, dosage_label, usage, prescribed_quantity, starts_on, ends_on, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      [id, familyId, personId, requireText(body.name, "name"), requireText(body.dosageLabel, "dosageLabel"), requireText(body.usage, "usage"), prescribedQuantity, requireText(body.startsOn, "startsOn"), body.endsOn ?? null, nowIso()],
     );
   }
 
@@ -530,6 +533,18 @@ async function saveMedicine(db: D1Database, familyId: string, id: string, body: 
       timingName,
     ]);
   }
+}
+
+function normalizePrescribedQuantity(value: number | null | undefined) {
+  if (value === null || value === undefined) {
+    return 0;
+  }
+
+  if (!Number.isInteger(value) || value < 0) {
+    throw badRequest("prescribedQuantity must be a non-negative integer");
+  }
+
+  return value;
 }
 
 async function validateIntakeTarget(db: D1Database, familyId: string, body: IntakeRequest) {
@@ -576,6 +591,7 @@ async function toMedicineResponse(db: D1Database, medicine: MedicineRow) {
     name: medicine.name,
     dosageLabel: medicine.dosage_label,
     usage: medicine.usage,
+    prescribedQuantity: medicine.prescribed_quantity,
     startsOn: medicine.starts_on,
     endsOn: medicine.ends_on,
     timingNames: timings.map((timing) => timing.timing_name),

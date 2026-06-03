@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
@@ -36,8 +36,11 @@ class SqliteD1Statement {
 
 export function createTestD1() {
   const database = new DatabaseSync(":memory:");
-  const migration = readFileSync(join(process.cwd(), "migrations", "0001_initial.sql"), "utf8");
-  database.exec(migration);
+  const migrationsDirectory = join(process.cwd(), "migrations");
+  for (const migrationFile of readdirSync(migrationsDirectory).filter((file) => file.endsWith(".sql")).sort()) {
+    const migration = readFileSync(join(migrationsDirectory, migrationFile), "utf8");
+    database.exec(migration);
+  }
 
   return {
     prepare(sql: string) {
