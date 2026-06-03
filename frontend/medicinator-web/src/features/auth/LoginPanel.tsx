@@ -48,8 +48,9 @@ function getLoginErrorMessage(loginError: unknown) {
 }
 
 export function LoginPanel() {
-  const { createAccountWithEmail, signInWithEmail, signInWithGoogle } =
-    useAuth();
+  const {
+    authError,
+    clearAuthError,
     createAccountWithEmail,
     signInWithEmail,
     signInWithGoogle,
