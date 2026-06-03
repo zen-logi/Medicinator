@@ -51,16 +51,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const firebaseAuth = auth;
 
-    void setPersistence(firebaseAuth, browserLocalPersistence).catch(() => {
-      setAuthError(
-        "ブラウザのストレージが利用できないためログイン状態を保存できません",
-      );
-    });
+    void setPersistence(firebaseAuth, browserLocalPersistence).catch(
+      (error) => {
+        reportFirebaseAuthError("Firebase Auth persistence failed", error);
+        setAuthError(
+          "ブラウザのストレージが利用できないためログイン状態を保存できません",
+        );
+      },
+    );
 
-    return onAuthStateChanged(firebaseAuth, (nextUser) => {
-      setUser(nextUser);
-      setLoading(false);
-    });
+    return onAuthStateChanged(
+      firebaseAuth,
+      (nextUser) => {
+        setUser(nextUser);
+        setLoading(false);
+      },
+      (error) => {
+        reportFirebaseAuthError("Firebase Auth state check failed", error);
+        setAuthError(
+          "Firebase Auth の状態確認に失敗しました。設定を確認して再読み込みしてください",
+        );
+        setLoading(false);
+      },
+    );
   }, [auth]);
 
   const apiClient = useMemo(
@@ -119,4 +132,22 @@ export function useAuth() {
     throw new Error("useAuth must be used inside AuthProvider.");
   }
   return context;
+}
+
+function reportFirebaseAuthError(context: string, error: unknown) {
+  if (!import.meta.env.DEV) {
+    return;
+  }
+
+  if (error instanceof Error) {
+    console.error(context, {
+      code: "code" in error ? error.code : undefined,
+      customData: "customData" in error ? error.customData : undefined,
+      message: error.message,
+      name: error.name,
+    });
+    return;
+  }
+
+  console.error(context, error);
 }

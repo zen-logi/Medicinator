@@ -9,7 +9,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/shared/components/button";
 import { Input } from "@/shared/components/input";
-import { isFirebaseConfigured } from "@/shared/api/firebase";
+import {
+  getFirebaseConfigIssues,
+  isFirebaseConfigured,
+} from "@/shared/api/firebase";
 import { useAuth } from "./AuthProvider";
 
 function getLoginErrorMessage(loginError: unknown) {
@@ -42,8 +45,9 @@ function getLoginErrorMessage(loginError: unknown) {
       return "このドメインは Firebase Auth で許可されていません";
     case "auth/api-key-not-valid.-please-pass-a-valid-api-key.":
     case "auth/invalid-api-key":
-    case "auth/internal-error":
       return `Firebase の設定を確認してください (${code})`;
+    case "auth/internal-error":
+      return "Firebase Auth の設定に不整合があります。Email/Password provider、API キー制限、Authorized domains を確認してください (auth/internal-error)";
     default:
       return `ログインに失敗しました${code ? ` (${code})` : ""}`;
   }
@@ -63,6 +67,7 @@ export function LoginPanel() {
   const [busy, setBusy] = useState(false);
   const [mode, setMode] = useState<"login" | "signup">("login");
   const visibleError = error ?? authError;
+  const firebaseConfigIssues = getFirebaseConfigIssues();
 
   function clearErrors() {
     setError(null);
@@ -201,7 +206,8 @@ export function LoginPanel() {
             </div>
             {!isFirebaseConfigured && (
               <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                Firebase の環境変数を設定するとログインできます。
+                Firebase の環境変数を設定するとログインできます。未設定:{" "}
+                {firebaseConfigIssues.join(", ")}
               </div>
             )}
             <form className="space-y-4" onSubmit={handleEmailLogin}>
