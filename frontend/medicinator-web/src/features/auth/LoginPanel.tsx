@@ -34,6 +34,8 @@ function getLoginErrorMessage(loginError: unknown) {
       return "パスワードは6文字以上で入力してください";
     case "auth/operation-not-allowed":
       return "このログイン方法が Firebase で有効になっていません";
+    case "auth/popup-blocked":
+      return "Google ログインのポップアップがブロックされました。ブラウザのポップアップ許可を確認してください";
     case "auth/popup-closed-by-user":
       return "Google ログインがキャンセルされました";
     case "auth/unauthorized-domain":
