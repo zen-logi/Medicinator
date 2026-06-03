@@ -1,4 +1,4 @@
-import { ChevronDown, Plus, Tablets } from "lucide-react";
+import { ChevronDown, Pencil, Plus, Tablets, X } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { Badge } from "@/shared/components/badge";
 import { Button } from "@/shared/components/button";
@@ -21,9 +21,23 @@ type MedicineListProps = {
     instructions: string;
     name: string;
     personId: string;
+    prescribedQuantity: number;
     startDate: string;
     timing: IntakeTiming[];
   }) => void;
+  onUpdate: (
+    medicineId: string,
+    input: {
+      dosage: string;
+      endDate?: string;
+      instructions: string;
+      name: string;
+      personId: string;
+      prescribedQuantity: number;
+      startDate: string;
+      timing: IntakeTiming[];
+    },
+  ) => void;
 };
 
 const usageMethods = [
@@ -35,11 +49,18 @@ const usageMethods = [
   "医師の指示通りに服用",
 ];
 
-export function MedicineList({ onAdd, people, medicines }: MedicineListProps) {
+export function MedicineList({
+  onAdd,
+  onUpdate,
+  people,
+  medicines,
+}: MedicineListProps) {
   const [isAdding, setIsAdding] = useState(medicines.length === 0);
+  const [editingId, setEditingId] = useState<string | undefined>();
   const [personId, setPersonId] = useState(people[0]?.id ?? "");
   const [name, setName] = useState("");
   const [dosage, setDosage] = useState("");
+  const [prescribedQuantity, setPrescribedQuantity] = useState("0");
   const [instructions, setInstructions] = useState(usageMethods[0]);
   const [startDate, setStartDate] = useState(
     new Date().toISOString().slice(0, 10),
@@ -53,18 +74,52 @@ export function MedicineList({ onAdd, people, medicines }: MedicineListProps) {
       return;
     }
 
-    onAdd({
+    const input = {
       dosage,
       endDate: endDate || undefined,
       instructions,
       name,
       personId,
+      prescribedQuantity: Math.max(
+        0,
+        Number.parseInt(prescribedQuantity, 10) || 0,
+      ),
       startDate,
       timing,
-    });
+    };
+
+    if (editingId) {
+      onUpdate(editingId, input);
+    } else {
+      onAdd(input);
+    }
+    resetForm();
+  }
+
+  function resetForm() {
+    setEditingId(undefined);
+    setIsAdding(false);
     setName("");
     setDosage("");
-    setIsAdding(false);
+    setPrescribedQuantity("0");
+    setInstructions(usageMethods[0]);
+    setStartDate(new Date().toISOString().slice(0, 10));
+    setEndDate("");
+    setTiming(["afterBreakfast"]);
+    setPersonId(people[0]?.id ?? "");
+  }
+
+  function startEdit(medicine: Medicine) {
+    setEditingId(medicine.id);
+    setIsAdding(true);
+    setPersonId(medicine.personId);
+    setName(medicine.name);
+    setDosage(medicine.dosage);
+    setPrescribedQuantity(String(medicine.stock));
+    setInstructions(medicine.instructions || usageMethods[0]);
+    setStartDate(medicine.startDate);
+    setEndDate(medicine.endDate ?? "");
+    setTiming(medicine.timing);
   }
 
   function toggleTiming(value: IntakeTiming) {
@@ -82,7 +137,13 @@ export function MedicineList({ onAdd, people, medicines }: MedicineListProps) {
     <section className="space-y-7">
       <div className="flex items-center justify-end">
         <Button
-          onClick={() => setIsAdding((current) => !current)}
+          onClick={() => {
+            if (isAdding) {
+              resetForm();
+              return;
+            }
+            setIsAdding(true);
+          }}
           size="sm"
           type="button"
           className="rounded-full"
@@ -95,7 +156,7 @@ export function MedicineList({ onAdd, people, medicines }: MedicineListProps) {
       {isAdding && (
         <Card className="motion-sheet">
           <CardHeader>
-            <CardTitle>薬を追加</CardTitle>
+            <CardTitle>{editingId ? "薬を編集" : "薬を追加"}</CardTitle>
           </CardHeader>
           <CardContent>
             <form className="space-y-6" onSubmit={handleSubmit}>
@@ -114,6 +175,18 @@ export function MedicineList({ onAdd, people, medicines }: MedicineListProps) {
                     onChange={(event) => setDosage(event.target.value)}
                     placeholder="5mg / 1錠"
                     value={dosage}
+                  />
+                </label>
+                <label className="block space-y-2 text-sm font-medium">
+                  <span>処方数量</span>
+                  <Input
+                    min={0}
+                    onChange={(event) =>
+                      setPrescribedQuantity(event.target.value)
+                    }
+                    placeholder="28"
+                    type="number"
+                    value={prescribedQuantity}
                   />
                 </label>
               </div>
@@ -203,8 +276,12 @@ export function MedicineList({ onAdd, people, medicines }: MedicineListProps) {
                 </div>
               </div>
               <Button className="w-full" type="submit">
-                <Plus aria-hidden className="h-4 w-4" />
-                追加
+                {editingId ? (
+                  <Pencil aria-hidden className="h-4 w-4" />
+                ) : (
+                  <Plus aria-hidden className="h-4 w-4" />
+                )}
+                {editingId ? "保存" : "追加"}
               </Button>
             </form>
           </CardContent>
@@ -224,7 +301,7 @@ export function MedicineList({ onAdd, people, medicines }: MedicineListProps) {
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-700 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.8)]">
                       <Tablets aria-hidden className="h-5 w-5" />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <h3 className="text-lg font-semibold text-zinc-950">
                         {medicine.name}
                       </h3>
@@ -244,10 +321,26 @@ export function MedicineList({ onAdd, people, medicines }: MedicineListProps) {
                           </Badge>
                         ))}
                         <Badge tone={medicine.stock <= 5 ? "amber" : "neutral"}>
-                          残 {medicine.stock}
+                          処方 {medicine.stock}
                         </Badge>
                       </div>
                     </div>
+                    <button
+                      aria-label={`${medicine.name}を編集`}
+                      className="motion-press flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-600"
+                      onClick={() =>
+                        editingId === medicine.id
+                          ? resetForm()
+                          : startEdit(medicine)
+                      }
+                      type="button"
+                    >
+                      {editingId === medicine.id ? (
+                        <X aria-hidden className="h-4 w-4" />
+                      ) : (
+                        <Pencil aria-hidden className="h-4 w-4" />
+                      )}
+                    </button>
                   </div>
                 </div>
               );
