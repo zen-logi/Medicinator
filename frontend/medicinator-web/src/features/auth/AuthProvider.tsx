@@ -30,6 +30,7 @@ type AuthContextValue = {
   loading: boolean;
   authError: string | null;
   apiClient: ApiClient;
+  clearAuthError(): void;
   createAccountWithEmail(email: string, password: string): Promise<void>;
   signInWithEmail(email: string, password: string): Promise<void>;
   signInWithGoogle(): Promise<void>;
@@ -37,6 +38,31 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const googleRedirectSessionKey = "medicinator:google-redirect";
+
+function isGoogleRedirectPending() {
+  try {
+    return sessionStorage.getItem(googleRedirectSessionKey) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markGoogleRedirectPending() {
+  try {
+    sessionStorage.setItem(googleRedirectSessionKey, "1");
+  } catch {
+    // セッションストレージが使えない場合も redirect 自体は Firebase に委ねる
+  }
+}
+
+function clearGoogleRedirectPending() {
+  try {
+    sessionStorage.removeItem(googleRedirectSessionKey);
+  } catch {
+    // セッションストレージが使えないブラウザでは削除不要
+  }
+}
 
 function getRedirectErrorMessage(error: unknown) {
   if (!(error instanceof Error)) {
@@ -76,15 +102,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let disposed = false;
     let unsubscribe: (() => void) | undefined;
 
+    return onAuthStateChanged(auth, (nextUser) => {
+      setUser(nextUser);
+      setLoading(false);
+    });
     async function initializeAuth() {
       setLoading(true);
       try {
         await setPersistence(firebaseAuth, browserLocalPersistence);
-        const redirectResult = await getRedirectResult(firebaseAuth);
-        if (!disposed && redirectResult?.user) {
-          setUser(redirectResult.user);
-          setAuthError(null);
-          setLoading(false);
+        if (isGoogleRedirectPending()) {
+          clearGoogleRedirectPending();
+          const redirectResult = await getRedirectResult(firebaseAuth);
+          if (!disposed && redirectResult?.user) {
+            setUser(redirectResult.user);
+            setAuthError(null);
+            setLoading(false);
+          }
         }
       } catch (error) {
         if (!disposed) {
@@ -123,6 +156,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       authError,
       apiClient,
+      clearAuthError() {
+        setAuthError(null);
+      },
       async createAccountWithEmail(email, password) {
         if (!auth) {
           throw new Error("Firebase Auth is not configured.");
@@ -141,6 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!auth) {
           throw new Error("Firebase Auth is not configured.");
         }
+        await signInWithRedirect(auth, googleProvider);
         setAuthError(null);
         try {
           await signInWithPopup(auth, googleProvider);
@@ -151,6 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             code === "auth/popup-blocked" ||
             code === "auth/popup-closed-by-user"
           ) {
+            markGoogleRedirectPending();
             await signInWithRedirect(auth, googleProvider);
             return;
           }
